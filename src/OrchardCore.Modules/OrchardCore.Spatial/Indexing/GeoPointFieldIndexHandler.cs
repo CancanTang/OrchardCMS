@@ -8,11 +8,11 @@ public class GeoPointFieldIndexHandler : ContentFieldIndexHandler<GeoPointField>
     public override Task BuildIndexAsync(GeoPointField field, BuildFieldIndexContext context)
     {
         var options = context.Settings.ToOptions();
-        ContentItemDocumentIndex.GeoPoint value = null;
+        DocumentIndex.GeoPoint value = null;
 
         if (field.Longitude != null && field.Latitude != null)
         {
-            value = new ContentItemDocumentIndex.GeoPoint
+            value = new DocumentIndex.GeoPoint
             {
                 Longitude = (decimal)field.Longitude,
                 Latitude = (decimal)field.Latitude,

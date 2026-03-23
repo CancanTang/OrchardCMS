@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using OrchardCore.Infrastructure.Html;
-using OrchardCore.Media.Models;
 using OrchardCore.ResourceManagement;
 using Shortcodes;
 
@@ -78,7 +77,7 @@ public class ImageShortcodeProvider : IShortcodeProvider
         var altText = string.Empty;
         if (arguments.Any())
         {
-            var mediaCommands = new MediaCommands();
+            var queryStringParams = new Dictionary<string, string>();
 
             var width = arguments.Named("width");
             var height = arguments.Named("height");
@@ -91,27 +90,27 @@ public class ImageShortcodeProvider : IShortcodeProvider
 
             if (width != null)
             {
-                mediaCommands.Width = width;
+                queryStringParams.Add("width", width);
             }
 
             if (height != null)
             {
-                mediaCommands.Height = height;
+                queryStringParams.Add("height", height);
             }
 
             if (mode != null)
             {
-                mediaCommands.ResizeMode = mode;
+                queryStringParams.Add("rmode", mode);
             }
 
             if (quality != null)
             {
-                mediaCommands.Quality = quality;
+                queryStringParams.Add("quality", quality);
             }
 
             if (format != null)
             {
-                mediaCommands.Format = format;
+                queryStringParams.Add("format", format);
             }
 
             if (appendVersion?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false)
@@ -129,7 +128,7 @@ public class ImageShortcodeProvider : IShortcodeProvider
                 altText = "alt=\"" + altText + "\" ";
             }
 
-            content = QueryHelpers.AddQueryString(content, mediaCommands.GetValues());
+            content = QueryHelpers.AddQueryString(content, queryStringParams);
         }
 
         content = "<img " + altText + className + "src=\"" + content + "\">";

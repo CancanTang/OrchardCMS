@@ -86,7 +86,5 @@ public sealed class Startup : StartupBase
 
         services.AddTransient<IPostConfigureOptions<ResourceOptions>, ResourceOptionsConfiguration>();
         services.AddTransient<IPostConfigureOptions<PagerOptions>, PagerOptionsConfiguration>();
-
-        services.AddScoped<IModularTenantEvents, PreloadSiteSettingsTenantEventHandler>();
     }
 }

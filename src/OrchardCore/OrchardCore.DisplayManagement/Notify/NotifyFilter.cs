@@ -126,30 +126,28 @@ public sealed class NotifyFilter : IActionFilter, IAsyncResultFilter, IPageFilte
 
     #endregion
 
-    public Task OnResultExecutionAsync(ResultExecutingContext filterContext, ResultExecutionDelegate next)
+    public async Task OnResultExecutionAsync(ResultExecutingContext filterContext, ResultExecutionDelegate next)
     {
         if (_shouldDeleteCookie)
         {
             DeleteCookies(filterContext);
 
-            return next();
+            await next();
+            return;
         }
 
         if (!filterContext.IsViewOrPageResult())
         {
-            return next();
+            await next();
+            return;
         }
 
         if (_existingEntries.Length == 0)
         {
-            return next();
+            await next();
+            return;
         }
 
-        return OnResultExecutionAsyncCore(filterContext, next);
-    }
-
-    private async Task OnResultExecutionAsyncCore(ResultExecutingContext filterContext, ResultExecutionDelegate next)
-    {
         var layout = await _layoutAccessor.GetLayoutAsync();
 
         var messagesZone = layout.Zones["Messages"];

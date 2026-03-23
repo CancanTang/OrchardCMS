@@ -16,18 +16,17 @@ public static class ContentRazorHelperExtensions
     /// <param name="orchardHelper">The <see cref="IOrchardHelper"/>.</param>
     /// <param name="markdown">The markdown to convert.</param>
     /// <param name="sanitize">Whether to sanitize the markdown. Defaults to <see langword="true"/>.</param>
-    /// <param name="renderLiquid">Whether Liquid should be rendered of displayed raw. Defaults to <see
-    /// langword="false"/>.</param>
-    public static async Task<IHtmlContent> MarkdownToHtmlAsync(
-        this IOrchardHelper orchardHelper,
-        string markdown,
-        bool sanitize = true,
-        bool renderLiquid = false)
+    public static async Task<IHtmlContent> MarkdownToHtmlAsync(this IOrchardHelper orchardHelper, string markdown, bool sanitize = true)
     {
         var shortcodeService = orchardHelper.HttpContext.RequestServices.GetRequiredService<IShortcodeService>();
         var markdownService = orchardHelper.HttpContext.RequestServices.GetRequiredService<IMarkdownService>();
 
-        if (renderLiquid)
+        // The default Markdown option is to entity escape html
+        // so filters must be run after the markdown has been processed.
+        markdown = markdownService.ToHtml(markdown ?? string.Empty);
+
+        // The liquid rendering is for backwards compatibility and can be removed in a future version.
+        if (!sanitize)
         {
             var liquidTemplateManager = orchardHelper.HttpContext.RequestServices.GetRequiredService<ILiquidTemplateManager>();
             var htmlEncoder = orchardHelper.HttpContext.RequestServices.GetRequiredService<HtmlEncoder>();
@@ -35,19 +34,16 @@ public static class ContentRazorHelperExtensions
             markdown = await liquidTemplateManager.RenderStringAsync(markdown, htmlEncoder);
         }
 
-        // The default Markdown option is to entity escape html so filters must be run after the markdown has been
-        // processed.
-        var html = markdownService.ToHtml(markdown ?? string.Empty);
-
         // TODO: provide context argument (optional on this helper as with the liquid helper?).
-        html = await shortcodeService.ProcessAsync(markdown);
+
+        markdown = await shortcodeService.ProcessAsync(markdown);
 
         if (sanitize)
         {
             var sanitizer = orchardHelper.HttpContext.RequestServices.GetRequiredService<IHtmlSanitizerService>();
-            html = sanitizer.Sanitize(html);
+            markdown = sanitizer.Sanitize(markdown);
         }
 
-        return new HtmlString(html);
+        return new HtmlString(markdown);
     }
 }

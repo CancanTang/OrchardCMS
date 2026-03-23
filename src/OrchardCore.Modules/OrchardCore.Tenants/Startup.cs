@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +81,7 @@ public sealed class FileProviderStartup : StartupBase
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = tenantFileProvider,
-            DefaultContentType = MediaTypeNames.Application.Octet,
+            DefaultContentType = "application/octet-stream",
             ServeUnknownFileTypes = true,
 
             // Cache the tenant static files for 30 days.

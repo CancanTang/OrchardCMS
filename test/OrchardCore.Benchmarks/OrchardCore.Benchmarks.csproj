@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>$(CommonTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
     <IsTestProject>false</IsTestProject>
     <TestProject>false</TestProject>
     <OutputType>Exe</OutputType>
@@ -12,7 +12,6 @@
     <!-- Without this, we get an "error CS0017: Program has more than one entry point defined." due to
     BenchmarkDotNet's auto-generated entry point. -->
     <StartupObject>OrchardCore.Benchmarks.Program</StartupObject>
-    <InterceptorsNamespaces>$(InterceptorsNamespaces);OrchardCore.DisplayManagement.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,7 +24,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OrchardCore.Tests\OrchardCore.Tests.csproj" />
-    <ProjectReference Include="..\..\src\OrchardCore\OrchardCore.SourceGenerators\OrchardCore.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <Import Project="..\..\src\OrchardCore.Build\OrchardCore.Commons.targets" />

@@ -1,6 +1,5 @@
 @model OrchardCore.Queries.Sql.ViewModels.AdminQueryViewModel
 @using OrchardCore.ContentManagement
-@using OrchardCore.Infrastructure
 @inject IContentManager ContentManager
 
 @{
@@ -66,20 +65,24 @@
 {
     <span class="text-muted">@T["Query executed in {0} ms", Model.Elapsed.TotalMilliseconds]</span>
 
-    var json = "[";
-
-    var i = 0;
-    @foreach (var document in Model.Documents)
+    var json = "";
+    if (Model.Documents.Any())
     {
-        json += Json.Serialize(document);
-        if (i < Model.Documents.Count() - 1)
-        {
-            json += ",";
-        }
-        i++;
-    }
+        json = "[";
+        var i = 0;
 
-    json += "]";
+        @foreach (var document in Model.Documents)
+        {
+            json += Json.Serialize(document);
+            if (i < Model.Documents.Count() - 1)
+            {
+                json += ",";
+            }
+            i++;
+        }
+
+        json += "]";
+    }
 
     <div class="form-control" style="min-height: 400px;">
         <div id="monaco_editor" style="min-height: 385px;" dir="@Orchard.CultureDir()"></div>
@@ -88,29 +91,29 @@
 }
 
 @{
-    string sqlmode =  MediaTypeNamesExtended.Text.SQL;
+    string sqlmode = "text/x-sql";
 
     if (Model.FactoryName.Contains("Sqlite"))
     {
-        sqlmode = MediaTypeNamesExtended.Text.SQLite;
+        sqlmode = "text/x-sqlite";
     }
     else if (Model.FactoryName.Contains("Mysql"))
     {
-        sqlmode = MediaTypeNamesExtended.Text.MySQL;
+        sqlmode = "text/x-mysql";
     }
     else if (Model.FactoryName.Contains("Npgsql"))
     {
-        sqlmode = MediaTypeNamesExtended.Text.PostgreSQL;
+        sqlmode = "text/x-pgsql";
     }
     else if (Model.FactoryName.Contains("Sql"))
     {
-        sqlmode = MediaTypeNamesExtended.Text.SqlServer;
+        sqlmode = "text/x-mssql";
     }
 }
 
 <script at="Foot">
     $(function () {
-        CodeMirror.fromTextArea(document.getElementById('@Html.IdFor(m => m.DecodedQuery)'), { mode: @MediaTypeNamesExtended.Text.PostgreSQL, lineNumbers: true, viewportMargin: Infinity });
+        CodeMirror.fromTextArea(document.getElementById('@Html.IdFor(m => m.DecodedQuery)'), { mode: "text/x-pgsql", lineNumbers: true, viewportMargin: Infinity });
         CodeMirror.fromTextArea(document.getElementById('@Html.IdFor(m => m.Parameters)'), { mode: "javascript", json: true, lineNumbers: true, viewportMargin: Infinity });
         if (rawSql = document.getElementById('@Html.IdFor(m => m.RawSql)')) {
             CodeMirror.fromTextArea(rawSql, { mode: "@sqlmode", lineNumbers: true, readonly: true, viewportMargin: Infinity });
@@ -138,10 +141,6 @@
             setTheme();
 
             const textArea = document.getElementById('monaco_textarea');
-            if (!textArea) {
-                return;
-            }
-
             const modelUri = monaco.Uri.parse("json://grid/settings.json");
             const jsonModel = monaco.editor.createModel(JSON.stringify(textArea, null, 4), "json", modelUri);
 

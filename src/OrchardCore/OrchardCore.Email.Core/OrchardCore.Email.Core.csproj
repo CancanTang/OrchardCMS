@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>OrchardCore.Email</RootNamespace>
     <!-- NuGet properties-->
     <Title>OrchardCore Email Core</Title>
     <Description>

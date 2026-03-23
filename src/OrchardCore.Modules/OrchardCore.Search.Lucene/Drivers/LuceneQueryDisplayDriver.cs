@@ -1,27 +1,25 @@
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Queries;
-using OrchardCore.Search.Lucene.Models;
+using OrchardCore.Search.Lucene.Model;
 using OrchardCore.Search.Lucene.ViewModels;
 
 namespace OrchardCore.Search.Lucene.Drivers;
 
 public sealed class LuceneQueryDisplayDriver : DisplayDriver<Query>
 {
-    private readonly IIndexProfileStore _indexStore;
+    private readonly LuceneIndexSettingsService _luceneIndexSettingsService;
 
     internal readonly IStringLocalizer S;
 
     public LuceneQueryDisplayDriver(
         IStringLocalizer<LuceneQueryDisplayDriver> stringLocalizer,
-        IIndexProfileStore indexStore)
+        LuceneIndexSettingsService luceneIndexSettingsService)
     {
-        _indexStore = indexStore;
+        _luceneIndexSettingsService = luceneIndexSettingsService;
         S = stringLocalizer;
     }
 
@@ -33,10 +31,8 @@ public sealed class LuceneQueryDisplayDriver : DisplayDriver<Query>
         }
 
         return Combine(
-            Dynamic("LuceneQuery_SummaryAdmin", model => { model.Query = query; })
-                .Location("Content:5"),
-            Dynamic("LuceneQuery_Buttons_SummaryAdmin", model => { model.Query = query; })
-                .Location("Actions:2")
+            Dynamic("LuceneQuery_SummaryAdmin", model => { model.Query = query; }).Location("Content:5"),
+            Dynamic("LuceneQuery_Buttons_SummaryAdmin", model => { model.Query = query; }).Location("Actions:2")
         );
     }
 
@@ -54,7 +50,7 @@ public sealed class LuceneQueryDisplayDriver : DisplayDriver<Query>
             model.Query = metadata.Template;
             model.Index = metadata.Index;
             model.ReturnContentItems = query.ReturnContentItems;
-            model.Indexes = (await _indexStore.GetByProviderAsync(LuceneConstants.ProviderName)).Select(x => new SelectListItem(x.Name, x.Name)).ToArray();
+            model.Indices = (await _luceneIndexSettingsService.GetSettingsAsync()).Select(x => x.IndexName).ToArray();
 
             // Extract query from the query string if we come from the main query editor.
             if (string.IsNullOrEmpty(metadata.Template))

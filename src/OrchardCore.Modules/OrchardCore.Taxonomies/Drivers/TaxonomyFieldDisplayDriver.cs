@@ -32,8 +32,8 @@ public sealed class TaxonomyFieldDisplayDriver : ContentFieldDisplayDriver<Taxon
             model.Field = field;
             model.Part = context.ContentPart;
             model.PartFieldDefinition = context.PartFieldDefinition;
-        }).Location(OrchardCoreConstants.DisplayType.Detail, "Content")
-        .Location(OrchardCoreConstants.DisplayType.Summary, "Content");
+        }).Location("Detail", "Content")
+        .Location("Summary", "Content");
     }
 
     public override IDisplayResult Edit(TaxonomyField field, BuildFieldEditorContext context)

@@ -4,8 +4,6 @@ using Elastic.Clients.Elasticsearch.QueryDsl;
 using Json.Path;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.Indexing;
-using OrchardCore.Indexing.Core;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 using OrchardCore.Search.Elasticsearch.Core.Services;
 
@@ -13,21 +11,18 @@ namespace OrchardCore.Search.Elasticsearch.Core.Providers;
 
 public class ElasticsearchContentPickerResultProvider : IContentPickerResultProvider
 {
-    private readonly IIndexProfileStore _indexProfileStore;
-    private readonly ElasticsearchIndexManager _indexManager;
+    private readonly ElasticsearchIndexManager _elasticIndexManager;
     private readonly ElasticsearchConnectionOptions _elasticConnectionOptions;
 
     public ElasticsearchContentPickerResultProvider(
-        IIndexProfileStore indexProfileStore,
         IOptions<ElasticsearchConnectionOptions> elasticConnectionOptions,
-        ElasticsearchIndexManager indexManager)
+        ElasticsearchIndexManager elasticIndexManager)
     {
         _elasticConnectionOptions = elasticConnectionOptions.Value;
-        _indexProfileStore = indexProfileStore;
-        _indexManager = indexManager;
+        _elasticIndexManager = elasticIndexManager;
     }
 
-    public string Name { get; } = ElasticsearchConstants.ProviderName;
+    public string Name => "Elasticsearch";
 
     public async Task<IEnumerable<ContentPickerResult>> Search(ContentPickerSearchContext searchContext)
     {
@@ -36,23 +31,23 @@ public class ElasticsearchContentPickerResultProvider : IContentPickerResultProv
             return [];
         }
 
+        string indexName = null;
+
         var fieldSettings = searchContext.PartFieldDefinition?.GetSettings<ContentPickerFieldElasticEditorSettings>();
 
-        if (string.IsNullOrWhiteSpace(fieldSettings?.Index))
+        if (!string.IsNullOrWhiteSpace(fieldSettings?.Index))
         {
-            return [];
+            indexName = fieldSettings.Index;
         }
 
-        var index = await _indexProfileStore.FindByIndexNameAndProviderAsync(fieldSettings.Index, ElasticsearchConstants.ProviderName);
-
-        if (index is null || index.Type != IndexingConstants.ContentsIndexSource || !await _indexManager.ExistsAsync(index.IndexFullName))
+        if (indexName != null && !await _elasticIndexManager.ExistsAsync(indexName))
         {
             return [];
         }
 
         var results = new List<ContentPickerResult>();
 
-        await _indexManager.SearchAsync(index, async client =>
+        await _elasticIndexManager.SearchAsync(indexName, async elasticClient =>
         {
             SearchResponse<JsonObject> searchResponse = null;
             var elasticTopDocs = new ElasticsearchResult();
@@ -61,8 +56,8 @@ public class ElasticsearchContentPickerResultProvider : IContentPickerResultProv
 
             if (string.IsNullOrWhiteSpace(searchContext.Query))
             {
-                searchResponse = await client.SearchAsync<JsonObject>(s => s
-                    .Indices(index.IndexFullName)
+                searchResponse = await elasticClient.SearchAsync<JsonObject>(s => s
+                    .Index(_elasticIndexManager.GetFullIndexName(indexName))
                     .Query(q => q
                         .Bool(b => b
                             .Filter(f => f
@@ -77,8 +72,8 @@ public class ElasticsearchContentPickerResultProvider : IContentPickerResultProv
             }
             else
             {
-                searchResponse = await client.SearchAsync<JsonObject>(s => s
-                    .Indices(index.IndexFullName)
+                searchResponse = await elasticClient.SearchAsync<JsonObject>(s => s
+                    .Index(_elasticIndexManager.GetFullIndexName(indexName))
                     .Query(q => q
                         .Bool(b => b
                             .Filter(f => f

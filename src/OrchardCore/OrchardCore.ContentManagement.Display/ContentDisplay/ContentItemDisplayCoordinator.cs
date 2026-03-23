@@ -58,9 +58,9 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
                     await result.ApplyAsync(context);
                 }
             }
-            catch (Exception ex) when (!ex.IsFatal())
+            catch (Exception ex)
             {
-                ex.LogException(_logger, displayDriver.GetType(), nameof(BuildDisplayAsync));
+                InvokeExtensions.HandleException(ex, _logger, displayDriver.GetType().Name, nameof(BuildDisplayAsync));
             }
         }
 
@@ -90,9 +90,9 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
                         await result.ApplyAsync(context);
                     }
                 }
-                catch (Exception ex) when (!ex.IsFatal())
+                catch (Exception ex)
                 {
-                    ex.LogException(_logger, partDisplayDrivers.GetType(), nameof(BuildDisplayAsync));
+                    InvokeExtensions.HandleException(ex, _logger, partDisplayDrivers.GetType().Name, nameof(BuildDisplayAsync));
                 }
             }
             var tempContext = context;
@@ -104,36 +104,55 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
             {
                 var shapeType = context.DisplayType != OrchardCoreConstants.DisplayType.Detail ? "ContentPart_" + context.DisplayType : "ContentPart";
 
-                var shapeResult = new ShapeResult(shapeType, ctx => ctx.ShapeFactory.CreateAsync(shapeType, shapeContext => ValueTask.FromResult<IShape>(new ZoneHolding(() => shapeContext.ShapeFactory.CreateAsync("Zone"))), ctx));
+                var shapeResult = new ShapeResult(shapeType, ctx => ctx.ShapeFactory.CreateAsync(shapeType, () => ValueTask.FromResult<IShape>(new ZoneHolding(() => ctx.ShapeFactory.CreateAsync("Zone")))));
                 shapeResult.Differentiator(partName);
                 shapeResult.Name(partName);
                 shapeResult.Location("Content");
                 shapeResult.OnGroup(context.GroupId);
                 shapeResult.Displaying(ctx =>
                 {
-                    var displayType = ctx.Shape.Metadata.DisplayType;
+                    var displayTypes = new[] { string.Empty, "_" + ctx.Shape.Metadata.DisplayType };
 
-                    // Get cached alternates and add them efficiently
-                    var cachedAlternates = ContentPartShapeAlternatesFactory.GetDisplayAlternates(
-                        contentType,
-                        partTypeName,
-                        partName,
-                        stereotype,
-                        hasStereotype,
-                        displayType);
+                    foreach (var displayType in displayTypes)
+                    {
+                        // eg. ServicePart,  ServicePart.Summary
+                        ctx.Shape.Metadata.Alternates.Add($"{partTypeName}{displayType}");
 
-                    ctx.Shape.Metadata.Alternates.AddRange(cachedAlternates);
+                        // [ContentType]_[DisplayType]__[PartType]
+                        // e.g. LandingPage-ServicePart, LandingPage-ServicePart.Summary
+                        ctx.Shape.Metadata.Alternates.Add($"{contentType}{displayType}__{partTypeName}");
+
+                        if (hasStereotype)
+                        {
+                            // [Stereotype]_[DisplayType]__[PartType],
+                            // e.g. Widget-ServicePart
+                            ctx.Shape.Metadata.Alternates.Add($"{stereotype}{displayType}__{partTypeName}");
+                        }
+                    }
+
+                    if (partTypeName == partName)
+                    {
+                        return;
+                    }
+
+                    foreach (var displayType in displayTypes)
+                    {
+                        // [ContentType]_[DisplayType]__[PartName]
+                        // e.g. Employee-Address1, Employee-Address2
+                        ctx.Shape.Metadata.Alternates.Add($"{contentType}{displayType}__{partName}");
+
+                        if (hasStereotype)
+                        {
+                            // [Stereotype]_[DisplayType]__[PartType]__[PartName]
+                            // e.g. Widget-Services
+                            ctx.Shape.Metadata.Alternates.Add($"{stereotype}{displayType}__{partTypeName}__{partName}");
+                        }
+                    }
                 });
 
                 await shapeResult.ApplyAsync(context);
 
                 var contentPartShape = shapeResult.Shape;
-
-                if (contentPartShape == null)
-                {
-                    // Part is explicitly hidden in placement.
-                    continue;
-                }
 
                 // Make the ContentPart property available on the shape
                 contentPartShape.Properties[partTypeName] = part.Content;
@@ -159,9 +178,9 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
                             await result.ApplyAsync(context);
                         }
                     }
-                    catch (Exception ex) when (!ex.IsFatal())
+                    catch (Exception ex)
                     {
-                        ex.LogException(_logger, fieldDisplayDriver.GetType(), nameof(BuildDisplayAsync));
+                        InvokeExtensions.HandleException(ex, _logger, fieldDisplayDriver.GetType().Name, nameof(BuildDisplayAsync));
                     }
                 }
             }
@@ -180,7 +199,7 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
 
         var contentShape = context.Shape as IZoneHolding;
         var partsShape = await context.ShapeFactory.CreateAsync("ContentZone",
-            Arguments.From(new ContentZoneArguments
+            Arguments.From(new
             {
                 Identifier = contentItem.ContentItemId,
             }));
@@ -197,9 +216,9 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
                     await result.ApplyAsync(context);
                 }
             }
-            catch (Exception ex) when (!ex.IsFatal())
+            catch (Exception ex)
             {
-                ex.LogException(_logger, displayDriver.GetType(), nameof(BuildEditorAsync));
+                InvokeExtensions.HandleException(ex, _logger, displayDriver.GetType().Name, nameof(BuildEditorAsync));
             }
         }
 
@@ -271,7 +290,7 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
 
         var contentShape = context.Shape as IZoneHolding;
         var partsShape = await context.ShapeFactory.CreateAsync("ContentZone",
-            Arguments.From(new ContentZoneArguments
+            Arguments.From(new
             {
                 Identifier = contentItem.ContentItemId,
             }));
@@ -288,9 +307,9 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
                     await result.ApplyAsync(context);
                 }
             }
-            catch (Exception ex) when (!ex.IsFatal())
+            catch (Exception ex)
             {
-                ex.LogException(_logger, displayDriver.GetType(), nameof(UpdateEditorAsync));
+                InvokeExtensions.HandleException(ex, _logger, displayDriver.GetType().Name, nameof(UpdateEditorAsync));
             }
         }
 
@@ -354,7 +373,6 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
     {
         var shapeType = "ContentPart_Edit";
         var partName = typePartDefinition.Name;
-        var isNamedPart = typePartDefinition.PartDefinition.IsReusable() && partName != partTypeName;
 
         var typePartShapeResult = new ShapeResult(shapeType, ctx => ctx.ShapeFactory.CreateAsync(shapeType));
         typePartShapeResult.Differentiator($"{contentType}-{partName}");
@@ -363,22 +381,24 @@ public class ContentItemDisplayCoordinator : IContentDisplayHandler
         typePartShapeResult.OnGroup(groupId);
         typePartShapeResult.Displaying(ctx =>
         {
-            // Get cached alternates and add them efficiently
-            var cachedAlternates = ContentPartShapeAlternatesFactory.GetEditorAlternates(
-                contentType,
-                partTypeName,
-                partName,
-                isNamedPart);
+            // ContentPart_Edit__[PartType]
+            // eg ContentPart-ServicePart.Edit
+            ctx.Shape.Metadata.Alternates.Add($"{shapeType}__{partTypeName}");
 
-            ctx.Shape.Metadata.Alternates.AddRange(cachedAlternates);
+            // ContentPart_Edit__[ContentType]__[PartType]
+            // e.g. ContentPart-LandingPage-ServicePart.Edit
+            ctx.Shape.Metadata.Alternates.Add($"{shapeType}__{contentType}__{partTypeName}");
+
+            var isNamedPart = typePartDefinition.PartDefinition.IsReusable() && partName != partTypeName;
+
+            if (isNamedPart)
+            {
+                // ContentPart_Edit__[ContentType]__[PartName]
+                // e.g. ContentPart-LandingPage-BillingService.Edit ContentPart-LandingPage-HelplineService.Edit
+                ctx.Shape.Metadata.Alternates.Add($"{shapeType}__{contentType}__{partName}");
+            }
         });
 
         return typePartShapeResult;
     }
-}
-
-[GenerateArguments]
-internal sealed partial class ContentZoneArguments
-{
-    public string Identifier { get; set; }
 }

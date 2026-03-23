@@ -9,6 +9,4 @@ public class SearchResult
     public bool Latest { get; set; }
 
     public bool Success { get; set; }
-
-    public long TotalCount { get; set; }
 }

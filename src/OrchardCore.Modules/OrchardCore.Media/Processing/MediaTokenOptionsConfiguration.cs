@@ -14,6 +14,9 @@ public sealed class MediaTokenOptionsConfiguration : IConfigureOptions<MediaToke
 
     public void Configure(MediaTokenOptions options)
     {
-        options.HashKey = _siteService.GetSettings<MediaTokenSettings>().HashKey;
+        options.HashKey = _siteService.GetSettingsAsync<MediaTokenSettings>()
+            .GetAwaiter()
+            .GetResult()
+            .HashKey;
     }
 }

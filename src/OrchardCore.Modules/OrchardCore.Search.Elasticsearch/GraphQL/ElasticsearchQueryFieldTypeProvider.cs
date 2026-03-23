@@ -10,8 +10,10 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Apis.GraphQL;
 using OrchardCore.Apis.GraphQL.Resolvers;
 using OrchardCore.ContentManagement.GraphQL.Queries;
+using OrchardCore.Entities;
 using OrchardCore.Queries;
 using OrchardCore.Search.Elasticsearch.Core.Services;
+using OrchardCore.Search.Elasticsearch.Models;
 
 namespace OrchardCore.Search.Elasticsearch.GraphQL.Queries;
 
@@ -66,6 +68,7 @@ public sealed class ElasticsearchQueryFieldTypeProvider : ISchemaBuilder
                 FieldType fieldType;
 
                 var fieldTypeName = querySchema["fieldTypeName"]?.ToString() ?? query.Name;
+                var metadata = query.As<ElasticsearchQueryMetadata>();
                 if (query.ReturnContentItems &&
                     type.StartsWith("ContentItem/", StringComparison.OrdinalIgnoreCase))
                 {

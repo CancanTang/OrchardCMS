@@ -32,10 +32,10 @@ public abstract class BaseDisplayManager
             }
         }
 
-        context.FindPlacement = (shapeType, differentiator, displayType, displayContext) => FindPlacementImpl(resolvers, shapeType, differentiator, displayType, displayContext);
+        context.FindPlacement = (shapeType, differentiator, displayType, displayContext) => FindPlacementImpl(resolvers, shapeType, differentiator, displayType, context);
     }
 
-    private static PlacementInfo FindPlacementImpl(List<IPlacementInfoResolver> placementResolvers, string shapeType, string differentiator, string displayType, IBuildShapeContext context)
+    private static PlacementInfo FindPlacementImpl(IList<IPlacementInfoResolver> placementResolvers, string shapeType, string differentiator, string displayType, IBuildShapeContext context)
     {
         var delimiterIndex = shapeType.IndexOf("__", StringComparison.Ordinal);
 
@@ -51,20 +51,14 @@ public abstract class BaseDisplayManager
             context.Shape
         );
 
-        PlacementInfo result = null;
-
-        for (var i = 0; i < placementResolvers.Count; i++)
-        {
-            var placement = placementResolvers[i].ResolvePlacement(placementContext);
-            result = PlacementInfoExtensions.Combine(result, placement);
-        }
-
-        return result;
+        return placementResolvers.Aggregate<IPlacementInfoResolver, PlacementInfo>(null, (prev, resolver) =>
+            PlacementInfoExtensions.Combine(prev, resolver.ResolvePlacement(placementContext))
+        );
     }
 
     protected ValueTask<IShape> CreateContentShapeAsync(string actualShapeType)
     {
-        return _shapeFactory.CreateAsync(actualShapeType, (displayManager) =>
-            ValueTask.FromResult<IShape>(new ZoneHolding(() => displayManager._shapeFactory.CreateAsync("ContentZone"))), this);
+        return _shapeFactory.CreateAsync(actualShapeType, () =>
+            ValueTask.FromResult<IShape>(new ZoneHolding(() => _shapeFactory.CreateAsync("ContentZone"))));
     }
 }

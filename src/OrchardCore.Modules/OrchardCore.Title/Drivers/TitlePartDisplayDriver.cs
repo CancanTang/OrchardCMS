@@ -31,8 +31,8 @@ public sealed class TitlePartDisplayDriver : ContentPartDisplayDriver<TitlePart>
             model.Title = titlePart.ContentItem.DisplayText;
             model.TitlePart = titlePart;
             model.ContentItem = titlePart.ContentItem;
-        }).Location(OrchardCoreConstants.DisplayType.Detail, "Header")
-        .Location(OrchardCoreConstants.DisplayType.Summary, "Header");
+        }).Location("Detail", "Header")
+        .Location("Summary", "Header");
     }
 
     public override IDisplayResult Edit(TitlePart titlePart, BuildPartEditorContext context)

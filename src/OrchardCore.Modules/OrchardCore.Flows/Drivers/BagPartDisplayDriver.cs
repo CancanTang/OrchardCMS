@@ -8,7 +8,6 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
@@ -16,7 +15,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Flows.Models;
 using OrchardCore.Flows.ViewModels;
-using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace OrchardCore.Flows.Drivers;
@@ -30,8 +28,6 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
     private readonly ILogger _logger;
     private readonly INotifier _notifier;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IEnumerable<IContentHandler> _contentHandlers;
-    private readonly IEnumerable<IContentHandler> _reversedContentHandlers;
 
     internal readonly IHtmlLocalizer H;
 
@@ -43,7 +39,6 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
         ILogger<BagPartDisplayDriver> logger,
         INotifier notifier,
         IHtmlLocalizer<BagPartDisplayDriver> htmlLocalizer,
-        IEnumerable<IContentHandler> contentHandlers,
         IAuthorizationService authorizationService
         )
     {
@@ -54,8 +49,6 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
         _logger = logger;
         _notifier = notifier;
         H = htmlLocalizer;
-        _contentHandlers = contentHandlers;
-        _reversedContentHandlers = contentHandlers.Reverse();
         _authorizationService = authorizationService;
     }
 
@@ -79,15 +72,11 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
         {
             var contentDefinitionManager = _serviceProvider.GetRequiredService<IContentDefinitionManager>();
 
-            var blocksSettings = context.TypePartDefinition.GetSettings<BagPartBlocksEditorSettings>();
-
             m.BagPart = bagPart;
             m.Updater = context.Updater;
             m.ContainedContentTypeDefinitions = await GetContainedContentTypesAsync(context.TypePartDefinition);
             m.AccessibleWidgets = await GetAccessibleWidgetsAsync(bagPart.ContentItems, contentDefinitionManager);
             m.TypePartDefinition = context.TypePartDefinition;
-            m.AddButtonText = blocksSettings.AddButtonText;
-            m.ModalTitleText = blocksSettings.ModalTitleText;
         });
     }
 
@@ -100,24 +89,24 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var contentItems = new Dictionary<string, ContentItem>();
-        var existsingContentItems = part.ContentItems.ToDictionary(x => x.ContentItemId, StringComparer.OrdinalIgnoreCase);
+        var contentItems = new List<ContentItem>();
 
         // Handle the content found in the request
         for (var i = 0; i < model.Prefixes.Length; i++)
         {
             var contentItem = await _contentManager.NewAsync(model.ContentTypes[i]);
 
-            // Try to match the requested id with an existing id
-            ContentItem existingContentItem = null;
+            // assign the owner of the item to ensure we can validate access to it later.
+            contentItem.Owner = GetCurrentOwner();
 
-            existsingContentItems.TryGetValue(model.ContentItems[i], out existingContentItem);
+            // Try to match the requested id with an existing id
+            var existingContentItem = part.ContentItems.FirstOrDefault(x => string.Equals(x.ContentItemId, model.ContentItems[i], StringComparison.OrdinalIgnoreCase));
 
             var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
 
             if (existingContentItem == null && !await AuthorizeAsync(contentTypeDefinition, CommonPermissions.EditContent, contentItem))
             {
-                // At this point the user is somehow trying to add content with no privileges. ignore the request
+                // at this point the user is somehow trying to add content with no privileges. ignore the request
                 continue;
             }
 
@@ -128,42 +117,29 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
             {
                 if (!await AuthorizeAsync(contentTypeDefinition, CommonPermissions.EditContent, existingContentItem))
                 {
-                    // At this point, the user is somehow modifying existing content with no privileges.
+                    // at this point the user is somehow modifying existing content with no privileges.
                     // honor the existing data and ignore the data in the request
-                    contentItems.Add(existingContentItem.ContentItemId, existingContentItem);
+                    contentItems.Add(existingContentItem);
 
                     continue;
                 }
 
-                // At this point the user have privileges to edit, merge the data from the request
-                var updateContentContext = new UpdateContentContext(contentItem);
-
-                await _contentHandlers.InvokeAsync((handler, context) => handler.UpdatingAsync(context), updateContentContext, _logger);
-
+                // at this point the user have privileges to edit, merge the data from the request
                 contentItem.ContentItemId = model.ContentItems[i];
                 contentItem.Merge(existingContentItem);
-
-                await contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, context.IsNew, htmlFieldPrefix: model.Prefixes[i]);
-                await _reversedContentHandlers.InvokeAsync((handler, context) => handler.UpdatedAsync(context), updateContentContext, _logger);
-            }
-            else
-            {
-                var createContentContext = new CreateContentContext(contentItem);
-
-                await _contentHandlers.InvokeAsync((handler, context) => handler.CreatingAsync(context), createContentContext, _logger);
-                await contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, context.IsNew, htmlFieldPrefix: model.Prefixes[i]);
-                await _reversedContentHandlers.InvokeAsync((handler, context) => handler.CreatedAsync(context), createContentContext, _logger);
             }
 
-            contentItems.Add(contentItem.ContentItemId, contentItem);
+            var widgetModel = await contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, context.IsNew, htmlFieldPrefix: model.Prefixes[i]);
+
+            contentItems.Add(contentItem);
         }
 
-        // At the end, lets add existing readonly contents.
+        // at the end, lets add existing readonly contents.
         foreach (var existingContentItem in part.ContentItems)
         {
-            if (contentItems.ContainsKey(existingContentItem.ContentItemId))
+            if (contentItems.Any(x => x.ContentItemId == existingContentItem.ContentItemId))
             {
-                // Item was already added using the edit.
+                // item was already added using the edit
 
                 continue;
             }
@@ -172,20 +148,20 @@ public sealed class BagPartDisplayDriver : ContentPartDisplayDriver<BagPart>
 
             if (await AuthorizeAsync(contentTypeDefinition, CommonPermissions.DeleteContent, existingContentItem))
             {
-                // At this point, the user has permission to delete a securable item or the type isn't securable
-                // if the existing content id isn't in the requested ids, don't add the content item... meaning the user deleted it.
+                // at this point the user has permission to delete a securable item or the type isn't securable
+                // if the existing content id isn't in the requested ids, don't add the content item... meaning the user deleted it
                 if (!model.ContentItems.Contains(existingContentItem.ContentItemId))
                 {
                     continue;
                 }
             }
 
-            // Since the content item isn't editable, lets add it so it's not removed from the collection
-            contentItems.Add(existingContentItem.ContentItemId, existingContentItem);
+            // since the content item isn't editable, lets add it so it's not removed from the collection
+            contentItems.Add(existingContentItem);
         }
 
         // TODO, some how here contentItems should be sorted by a defined order
-        part.ContentItems = contentItems.Values.ToList();
+        part.ContentItems = contentItems;
 
         return Edit(part, context);
     }

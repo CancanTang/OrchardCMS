@@ -43,10 +43,7 @@ public class WorkflowTrimmingBackgroundTask : IBackgroundTask
                 batchSize
             );
 
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Trimmed {TrimmedCount} workflow instances.", trimmedCount);
-            }
+            logger.LogDebug("Trimmed {TrimmedCount} workflow instances.", trimmedCount);
 
             var workflowTrimmingSateDocumentManager = serviceProvider.GetRequiredService<IDocumentManager<WorkflowTrimmingState>>();
             var workflowTrimmingState = await workflowTrimmingSateDocumentManager.GetOrCreateMutableAsync();

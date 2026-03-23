@@ -6,6 +6,4 @@ public class OptionsViewModel
     public string ContainerName { get; set; }
     public string BasePath { get; set; }
     public bool CreateContainer { get; set; }
-    public bool RemoveContainer { get; set; }
-    public bool RemoveFilesFromBasePath { get; set; }
 }

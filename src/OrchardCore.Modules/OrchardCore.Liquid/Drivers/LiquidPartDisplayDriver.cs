@@ -26,9 +26,9 @@ public sealed class LiquidPartDisplayDriver : ContentPartDisplayDriver<LiquidPar
     {
         return CombineAsync(
             Initialize<LiquidPartViewModel>("LiquidPart", m => BuildViewModel(m, liquidPart))
-                .Location(OrchardCoreConstants.DisplayType.Detail, "Content"),
+                .Location("Detail", "Content"),
             Initialize<LiquidPartViewModel>("LiquidPart_Summary", m => BuildViewModel(m, liquidPart))
-                .Location(OrchardCoreConstants.DisplayType.Summary, "Content")
+                .Location("Summary", "Content")
         );
     }
 

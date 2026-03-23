@@ -5,7 +5,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Infrastructure;
 using OrchardCore.Settings;
 using OrchardCore.Sms.Models;
 
@@ -45,7 +44,7 @@ public class TwilioSmsProvider : ISmsProvider
         S = stringLocalizer;
     }
 
-    public async Task<Result> SendAsync(SmsMessage message)
+    public async Task<SmsResult> SendAsync(SmsMessage message)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -62,17 +61,9 @@ public class TwilioSmsProvider : ISmsProvider
         try
         {
             var settings = await GetSettingsAsync();
-
-            var senderNumber = settings.PhoneNumber;
-
-            if (!string.IsNullOrEmpty(message.From))
-            {
-                senderNumber = message.From;
-            }
-
             var data = new List<KeyValuePair<string, string>>
             {
-                new ("From", senderNumber),
+                new ("From", settings.PhoneNumber),
                 new ("To", message.To),
                 new ("Body", message.Body),
             };
@@ -87,19 +78,19 @@ public class TwilioSmsProvider : ISmsProvider
                 if (string.Equals(result.Status, "sent", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(result.Status, "queued", StringComparison.OrdinalIgnoreCase))
                 {
-                    return Result.Success();
+                    return SmsResult.Success;
                 }
 
                 _logger.LogError("Twilio service was unable to send SMS messages. Error, code: {ErrorCode}, message: {ErrorMessage}", result.ErrorCode, result.ErrorMessage);
             }
 
-            return Result.Failed(S["The SMS message has not been sent."]);
+            return SmsResult.Failed(S["SMS message was not send."]);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Twilio service was unable to send SMS messages.");
 
-            return Result.Failed(S["The SMS message has not been sent. Error: {0}", ex.Message]);
+            return SmsResult.Failed(S["SMS message was not send. Error: {0}", ex.Message]);
         }
     }
 

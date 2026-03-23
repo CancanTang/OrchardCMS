@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.OpenId.Settings;
 using OrchardCore.OpenId.ViewModels;
 
@@ -9,15 +12,22 @@ namespace OrchardCore.OpenId.Drivers;
 
 public sealed class OpenIdValidationSettingsDisplayDriver : DisplayDriver<OpenIdValidationSettings>
 {
+    private readonly IShellHost _shellHost;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
+    internal readonly IStringLocalizer S;
+
     public OpenIdValidationSettingsDisplayDriver(
+        IShellHost shellHost,
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<OpenIdValidationSettingsDisplayDriver> stringLocalizer)
     {
+        _shellHost = shellHost;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(OpenIdValidationSettings settings, BuildEditorContext context)
@@ -61,6 +71,16 @@ public sealed class OpenIdValidationSettingsDisplayDriver : DisplayDriver<OpenId
         settings.Audience = model.Audience?.Trim();
         settings.DisableTokenTypeValidation = model.DisableTokenTypeValidation;
         settings.Tenant = model.Tenant;
+
+        if (!string.IsNullOrEmpty(model.Tenant) &&
+        (!_shellHost.TryGetShellContext(model.Tenant, out var shellContext) || !shellContext.Settings.IsRunning()))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tenant), S["Invalid tenant value."]);
+        }
+        else if (!hasAuthority)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Authority), S["A tenant or authority value is required."]);
+        }
 
         return await EditAsync(settings, context);
     }

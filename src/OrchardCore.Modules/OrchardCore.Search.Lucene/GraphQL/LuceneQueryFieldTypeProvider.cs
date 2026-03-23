@@ -12,7 +12,7 @@ using OrchardCore.Apis.GraphQL.Resolvers;
 using OrchardCore.ContentManagement.GraphQL.Queries;
 using OrchardCore.Entities;
 using OrchardCore.Search.Lucene;
-using OrchardCore.Search.Lucene.Models;
+using OrchardCore.Search.Lucene.Model;
 
 namespace OrchardCore.Queries.Lucene.GraphQL.Queries;
 

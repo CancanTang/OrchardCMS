@@ -25,7 +25,9 @@ public sealed class SmtpOptionsConfiguration : IConfigureOptions<SmtpOptions>
 
     public void Configure(SmtpOptions options)
     {
-        var settings = _siteService.GetSettings<SmtpSettings>();
+        var settings = _siteService.GetSettingsAsync<SmtpSettings>()
+            .GetAwaiter()
+            .GetResult();
 
         options.DefaultSender = settings.DefaultSender;
         options.DeliveryMethod = settings.DeliveryMethod;

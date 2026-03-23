@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Net.Mime;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -62,7 +61,7 @@ public sealed class SitemapController : Controller
 
             // File result will dispose of stream.
             var stream = await fileResolver.OpenReadStreamAsync();
-            return File(stream, MediaTypeNames.Application.Xml);
+            return File(stream, "application/xml");
         }
         else
         {
@@ -117,7 +116,7 @@ public sealed class SitemapController : Controller
             work.Position = 0;
 
             // File result will dispose of stream.
-            return File(work, MediaTypeNames.Application.Xml);
+            return File(work, "application/xml");
         }
     }
 }

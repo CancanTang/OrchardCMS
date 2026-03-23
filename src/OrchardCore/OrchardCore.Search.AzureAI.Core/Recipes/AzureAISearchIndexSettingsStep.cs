@@ -1,10 +1,9 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Indexing;
-using OrchardCore.Indexing.Core;
-using OrchardCore.Indexing.Models;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Search.AzureAI.Models;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace OrchardCore.Search.AzureAI.Recipes;
 
@@ -12,16 +11,19 @@ public sealed class AzureAISearchIndexSettingsStep : NamedRecipeStepHandler
 {
     public const string Name = "azureai-index-create";
 
-    private readonly IIndexProfileManager _indexProfileManager;
+    private readonly AzureAISearchIndexManager _indexManager;
+    private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
 
     internal readonly IStringLocalizer S;
 
     public AzureAISearchIndexSettingsStep(
-        IIndexProfileManager indexProfileManager,
+        AzureAISearchIndexManager indexManager,
+        AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IStringLocalizer<AzureAISearchIndexSettingsStep> stringLocalizer)
         : base(Name)
     {
-        _indexProfileManager = indexProfileManager;
+        _indexManager = indexManager;
+        _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         S = stringLocalizer;
     }
 
@@ -34,39 +36,54 @@ public sealed class AzureAISearchIndexSettingsStep : NamedRecipeStepHandler
 
         foreach (var token in tokens)
         {
-            IndexProfile index = null;
+            var sourceName = token[nameof(AzureAISearchIndexSettings.Source)]?.GetValue<string>();
 
-            var id = token[nameof(index.Id)]?.GetValue<string>();
-
-            if (!string.IsNullOrEmpty(id))
+            if (!string.IsNullOrEmpty(sourceName))
             {
-                index = await _indexProfileManager.FindByIdAsync(id);
-            }
-
-            if (index is not null)
-            {
-                await _indexProfileManager.UpdateAsync(index, token);
-            }
-            else
-            {
-                var type = token[nameof(index.Type)]?.GetValue<string>() ?? IndexingConstants.ContentsIndexSource;
-
-                index = await _indexProfileManager.NewAsync(AzureAISearchConstants.ProviderName, type, token);
-            }
-
-            var validationResult = await _indexProfileManager.ValidateAsync(index);
-
-            if (!validationResult.Succeeded)
-            {
-                foreach (var error in validationResult.Errors)
-                {
-                    context.Errors.Add(error.ErrorMessage);
-                }
+                context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
 
                 continue;
             }
 
-            await _indexProfileManager.CreateAsync(index);
+            var indexName = token[nameof(AzureAISearchIndexSettings.IndexName)]?.GetValue<string>();
+
+            if (string.IsNullOrWhiteSpace(indexName))
+            {
+                context.Errors.Add(S["No index name was provided in the '{0}' recipe step.", Name]);
+
+                continue;
+            }
+
+            if (!AzureAISearchIndexNamingHelper.TryGetSafeIndexName(indexName, out var safeIndexName))
+            {
+                context.Errors.Add(S["Invalid index name was provided in the recipe step. IndexName: {0}.", indexName]);
+
+                continue;
+            }
+
+            if (!await _indexManager.ExistsAsync(safeIndexName))
+            {
+                var indexSettings = await _azureAISearchIndexSettingsService.NewAsync(sourceName, token);
+
+                var validationResult = await _azureAISearchIndexSettingsService.ValidateAsync(indexSettings);
+
+                if (!validationResult.Succeeded)
+                {
+                    foreach (var error in validationResult.Errors)
+                    {
+                        context.Errors.Add(error.ErrorMessage);
+                    }
+
+                    continue;
+                }
+
+                await _azureAISearchIndexSettingsService.CreateAsync(indexSettings);
+
+                if (await _indexManager.CreateAsync(indexSettings))
+                {
+                    await _azureAISearchIndexSettingsService.SynchronizeAsync(indexSettings);
+                }
+            }
         }
     }
 }

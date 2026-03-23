@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Hosting;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.Environment.Extensions;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
@@ -14,8 +15,6 @@ public class ShapePlacementParsingStrategy : ShapeTableProvider, IShapeTableHarv
     private readonly IHostEnvironment _hostingEnvironment;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IEnumerable<IPlacementNodeFilterProvider> _placementParseMatchProviders;
-    private readonly Dictionary<string, PlacementFile> _placementFileCache = new();
-    private readonly Dictionary<PlacementNode, Func<ShapePlacementContext, bool>> _predicateCache = new();
 
     public ShapePlacementParsingStrategy(
         IHostEnvironment hostingEnvironment,
@@ -40,25 +39,20 @@ public class ShapePlacementParsingStrategy : ShapeTableProvider, IShapeTableHarv
 
     private Task ProcessFeatureDescriptorAsync(ShapeTableBuilder builder, IFeatureInfo featureDescriptor)
     {
-        if (!_placementFileCache.TryGetValue(featureDescriptor.Extension.Id, out var placementFile))
-        {
-            // TODO : (ngm) Replace with configuration Provider and read from that.
-            // Dont use JSON Deserializer directly.
-            var virtualFileInfo = _hostingEnvironment
-                .GetExtensionFileInfo(featureDescriptor.Extension, "placement.json");
+        // TODO : (ngm) Replace with configuration Provider and read from that.
+        // Dont use JSON Deserializer directly.
+        var virtualFileInfo = _hostingEnvironment
+            .GetExtensionFileInfo(featureDescriptor.Extension, "placement.json");
 
-            if (virtualFileInfo.Exists)
+        if (virtualFileInfo.Exists)
+        {
+            using var stream = virtualFileInfo.CreateReadStream();
+
+            var placementFile = JsonSerializer.Deserialize<PlacementFile>(stream, JOptions.Default);
+            if (placementFile is not null)
             {
-                using var stream = virtualFileInfo.CreateReadStream();
-                placementFile = JsonSerializer.Deserialize<PlacementFile>(stream, JOptions.Default);
+                ProcessPlacementFile(builder, featureDescriptor, placementFile);
             }
-
-            _placementFileCache[featureDescriptor.Extension.Id] = placementFile;
-        }
-
-        if (placementFile is not null)
-        {
-            ProcessPlacementFile(builder, featureDescriptor, placementFile);
         }
 
         return Task.CompletedTask;
@@ -72,28 +66,31 @@ public class ShapePlacementParsingStrategy : ShapeTableProvider, IShapeTableHarv
 
             foreach (var filter in entry.Value)
             {
-                var matches = filter.Filters;
+                var matches = filter.Filters.ToList();
 
-                if (!_predicateCache.TryGetValue(filter, out var predicate))
+                Func<ShapePlacementContext, bool> predicate = ctx => CheckFilter(ctx, filter);
+
+                if (matches.Count > 0)
                 {
-                    predicate = ctx => CheckFilter(ctx, filter);
-
-                    if (matches.Count > 0)
-                    {
-                        predicate = matches.Aggregate(predicate, BuildPredicate);
-                    }
-
-                    _predicateCache[filter] = predicate;
+                    predicate = matches.Aggregate(predicate, BuildPredicate);
                 }
 
-                var placement = new PlacementInfo(
-                    filter.Location,
-                    null,
-                    filter.ShapeType,
-                    null,
-                    filter.Alternates,
-                    filter.Wrappers
-                );
+                var placement = new PlacementInfo
+                {
+                    Location = filter.Location,
+                };
+
+                if (filter.Alternates?.Length > 0)
+                {
+                    placement.Alternates = new AlternatesCollection(filter.Alternates);
+                }
+
+                if (filter.Wrappers?.Length > 0)
+                {
+                    placement.Wrappers = new AlternatesCollection(filter.Wrappers);
+                }
+
+                placement.ShapeType = filter.ShapeType;
 
                 builder.Describe(shapeType)
                     .From(featureDescriptor)

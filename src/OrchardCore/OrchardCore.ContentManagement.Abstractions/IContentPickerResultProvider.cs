@@ -5,7 +5,6 @@ namespace OrchardCore.ContentManagement;
 public interface IContentPickerResultProvider
 {
     string Name { get; }
-
     Task<IEnumerable<ContentPickerResult>> Search(ContentPickerSearchContext searchContext);
 }
 

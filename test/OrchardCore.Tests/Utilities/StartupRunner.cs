@@ -1,28 +1,13 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Localization;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System.Net;
-using Xunit;
-
 namespace OrchardCore.Tests;
 
 internal static class StartupRunner
 {
     public static async Task Run(Type startupType, string culture, string expected)
     {
-        var builder = Host.CreateDefaultBuilder()
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-                webBuilder.UseTestServer()
-                          .UseStartup(startupType);
-            });
+        var webHostBuilder = new WebHostBuilder().UseStartup(startupType);
+        var testHost = new TestServer(webHostBuilder);
 
-        using var host = await builder.StartAsync();
-        var client = host.GetTestClient();
-        
+        var client = testHost.CreateClient();
         var request = new HttpRequestMessage();
         var cookieValue = $"c={culture}|uic={culture}";
         request.Headers.Add("Cookie", $"{CookieRequestCultureProvider.DefaultCookieName}={cookieValue}");

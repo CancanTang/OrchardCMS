@@ -1,9 +1,7 @@
 @using OrchardCore.DisplayManagement.Views
 @using OrchardCore.ContentTypes.Deployment
-@using OrchardCore.Localization.Data
 @model ShapeViewModel<ContentDefinitionDeploymentStep>
 @inject OrchardCore.ContentManagement.Metadata.IContentDefinitionManager ContentDefinitionManager
-@inject IDataLocalizer D
 
 <h5>@T["Update Content Definitions"]</h5>
 
@@ -27,7 +25,7 @@ else
         {
             if (contentTypes.Contains(def.Name))
             {
-                <span class="badge ta-badge">@D[def.DisplayName, "Content Types"]</span>
+                <span class="badge ta-badge">@def.DisplayName</span>
             }
         }
     }

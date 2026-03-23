@@ -21,7 +21,6 @@ public sealed class TaxonomyFieldSettingsDriver : ContentPartFieldDefinitionDisp
             model.Unique = settings.Unique;
             model.LeavesOnly = settings.LeavesOnly;
             model.Open = settings.Open;
-            model.Placeholder = settings.Placeholder;
         }).Location("Content");
     }
 

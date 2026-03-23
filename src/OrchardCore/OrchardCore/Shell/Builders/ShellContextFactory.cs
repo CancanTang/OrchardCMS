@@ -79,21 +79,10 @@ public class ShellContextFactory : IShellContextFactory
             var blueprint = await _compositionStrategy.ComposeAsync(settings, shellDescriptor);
             var provider = await _shellContainerFactory.CreateContainerAsync(settings, blueprint);
 
-            var options = provider.GetRequiredService<IOptions<ShellContainerOptions>>().Value;
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Invoking shell container initializers described context for tenant '{TenantName}'. There are a total of '{TotalInitializers}' initializers to invoke", settings.Name, options.Initializers.Count);
-            }
-
+            var options = provider.GetService<IOptions<ShellContainerOptions>>().Value;
             foreach (var initializeAsync in options.Initializers)
             {
                 await initializeAsync(provider);
-            }
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Done creating described context for tenant '{TenantName}'", settings.Name);
             }
 
             return new ShellContext
@@ -102,12 +91,6 @@ public class ShellContextFactory : IShellContextFactory
                 Blueprint = blueprint,
                 ServiceProvider = provider,
             };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while creating described context for tenant '{TenantName}'", settings.Name);
-
-            throw;
         }
         finally
         {

@@ -253,11 +253,16 @@ public class WorkflowManager : IWorkflowManager
         workflowContext.Status = WorkflowStatus.Resuming;
 
         // Signal every activity that the workflow is about to be resumed.
-        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnInputReceivedAsync(workflowContext, input));
-        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnWorkflowResumingAsync(workflowContext, workflowContext.CancellationToken));
+        var cancellationToken = new CancellationToken();
 
-        if (workflowContext.CancellationToken.IsCancellationRequested)
+        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnInputReceivedAsync(workflowContext, input));
+        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnWorkflowResumingAsync(workflowContext, cancellationToken));
+
+        if (cancellationToken.IsCancellationRequested)
         {
+            // Workflow is aborted.
+            workflowContext.Status = WorkflowStatus.Aborted;
+
             return workflowContext;
         }
 
@@ -307,13 +312,17 @@ public class WorkflowManager : IWorkflowManager
 
         // Signal every activity that the workflow is about to start.
         // This should be called prior OnInputReceivedAsync.
-        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnWorkflowRestartingAsync(workflowContext, workflowContext.CancellationToken));
+        var cancellationToken = new CancellationToken();
+        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnWorkflowRestartingAsync(workflowContext, cancellationToken));
 
         // Signal every activity about available input.
         await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnInputReceivedAsync(workflowContext, input));
 
-        if (workflowContext.CancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested)
         {
+            // Workflow is aborted.
+            workflowContext.Status = WorkflowStatus.Aborted;
+
             return workflowContext;
         }
 
@@ -359,10 +368,14 @@ public class WorkflowManager : IWorkflowManager
         await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnInputReceivedAsync(workflowContext, input));
 
         // Signal every activity that the workflow is about to start.
-        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnWorkflowStartingAsync(workflowContext, workflowContext.CancellationToken));
+        var cancellationToken = new CancellationToken();
+        await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnWorkflowStartingAsync(workflowContext, cancellationToken));
 
-        if (workflowContext.CancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested)
         {
+            // Workflow is aborted.
+            workflowContext.Status = WorkflowStatus.Aborted;
+
             return workflowContext;
         }
 
@@ -411,10 +424,13 @@ public class WorkflowManager : IWorkflowManager
             var activityContext = workflowContext.GetActivity(activity.ActivityId);
 
             // Signal every activity that the activity is about to be executed.
-            await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnActivityExecutingAsync(workflowContext, activityContext, workflowContext.CancellationToken));
+            var cancellationToken = new CancellationToken();
+            await InvokeActivitiesAsync(workflowContext, x => x.Activity.OnActivityExecutingAsync(workflowContext, activityContext, cancellationToken));
 
-            if (workflowContext.CancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
+                // Activity is aborted.
+                workflowContext.Status = WorkflowStatus.Aborted;
                 break;
             }
 

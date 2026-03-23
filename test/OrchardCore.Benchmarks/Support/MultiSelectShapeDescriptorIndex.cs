@@ -9,7 +9,7 @@ using OrchardCore.DisplayManagement.Implementation;
 
 namespace OrchardCore.Benchmarks.Support;
 
-public class MultiSelectShapeDescriptorIndex : OriginalShapeDescriptor
+public class MultiSelectShapeDescriptorIndex : ShapeDescriptor
 {
     private readonly ConcurrentDictionary<string, FeatureShapeDescriptor> _descriptors;
     private readonly List<FeatureShapeDescriptor> _alternationDescriptors;
@@ -41,8 +41,9 @@ public class MultiSelectShapeDescriptorIndex : OriginalShapeDescriptor
             .SelectMany(sd => sd.Wrappers)
             .ToList();
 
-        // BindingSources were removed from FeatureShapeDescriptor.
-        _bindingSources = new List<string>();
+        _bindingSources = _alternationDescriptors
+            .SelectMany(sd => sd.BindingSources)
+            .ToList();
 
         _bindings = _alternationDescriptors
             .SelectMany(sd => sd.Bindings)
@@ -116,7 +117,7 @@ public class MultiSelectShapeDescriptorIndex : OriginalShapeDescriptor
     public override IReadOnlyList<string> BindingSources => _bindingSources;
 }
 
-public class MultiSelectShapeDescriptorIndexArray : OriginalShapeDescriptor
+public class MultiSelectShapeDescriptorIndexArray : ShapeDescriptor
 {
     private readonly ConcurrentDictionary<string, FeatureShapeDescriptor> _descriptors;
     private readonly FeatureShapeDescriptor[] _alternationDescriptors;
@@ -148,8 +149,9 @@ public class MultiSelectShapeDescriptorIndexArray : OriginalShapeDescriptor
             .SelectMany(sd => sd.Wrappers)
             .ToArray();
 
-        // BindingSources were removed from FeatureShapeDescriptor.
-        _bindingSources = Array.Empty<string>();
+        _bindingSources = _alternationDescriptors
+            .SelectMany(sd => sd.BindingSources)
+            .ToArray();
 
         _bindings = _alternationDescriptors
             .SelectMany(sd => sd.Bindings)

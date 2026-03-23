@@ -142,7 +142,8 @@ public class RoleUpdater : FeatureEventHandler, IRoleCreatedEventHandler, IRoleR
         // Get installed features that are no more enabled.
         var missingFeatures = _shellDescriptor.Installed
             .Except(_shellDescriptor.Features)
-            .Select(feature => feature.Id);
+            .Select(feature => feature.Id)
+            .ToArray();
 
         // And defining at least one 'IPermissionProvider'.
         rolesDocument.MissingFeaturesByRole[roleName] = (await _extensionManager.LoadFeaturesAsync(missingFeatures))
@@ -225,10 +226,7 @@ public class RoleUpdater : FeatureEventHandler, IRoleCreatedEventHandler, IRoleR
 
         foreach (var permission in additionalPermissions)
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Default role '{RoleName}' granted permission '{PermissionName}'.", role.RoleName, permission);
-            }
+            _logger.LogDebug("Default role '{RoleName}' granted permission '{PermissionName}'.", role.RoleName, permission);
 
             role.RoleClaims.Add(RoleClaim.Create(permission));
         }

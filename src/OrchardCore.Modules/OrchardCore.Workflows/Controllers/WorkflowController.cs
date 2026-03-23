@@ -92,8 +92,8 @@ public sealed class WorkflowController : Controller
 
         query = model.Options.Filter switch
         {
-            WorkflowFilter.Finished => query.Where(x => x.WorkflowStatus == WorkflowStatus.Finished),
-            WorkflowFilter.Faulted => query.Where(x => x.WorkflowStatus == WorkflowStatus.Faulted),
+            WorkflowFilter.Finished => query.Where(x => x.WorkflowStatus == (int)WorkflowStatus.Finished),
+            WorkflowFilter.Faulted => query.Where(x => x.WorkflowStatus == (int)WorkflowStatus.Faulted),
             _ => query,
         };
 
@@ -188,29 +188,23 @@ public sealed class WorkflowController : Controller
             activityDesignShapes.Add(await BuildActivityDisplayAsync(activityContext, workflowType.Id, blockingActivities.ContainsKey(activityContext.ActivityRecord.ActivityId), "Design"));
         }
 
-        var activitiesDataQuery = new List<object>();
-
-        foreach (var activityContext in activityContexts)
+        var activitiesDataQuery = activityContexts.Select(x => new
         {
-            activitiesDataQuery.Add(new
-            {
-                Id = activityContext.ActivityRecord.ActivityId,
-                activityContext.ActivityRecord.X,
-                activityContext.ActivityRecord.Y,
-                activityContext.ActivityRecord.Name,
-                activityContext.ActivityRecord.IsStart,
-                IsEvent = activityContext.Activity.IsEvent(),
-                IsBlocking = workflow.BlockingActivities.Any(a => a.ActivityId == activityContext.ActivityRecord.ActivityId),
-                Outcomes = (await activityContext.Activity.GetPossibleOutcomesAsync(workflowContext, activityContext)).ToArray(),
-            });
-        }
-
+            Id = x.ActivityRecord.ActivityId,
+            x.ActivityRecord.X,
+            x.ActivityRecord.Y,
+            x.ActivityRecord.Name,
+            x.ActivityRecord.IsStart,
+            IsEvent = x.Activity.IsEvent(),
+            IsBlocking = workflow.BlockingActivities.Any(a => a.ActivityId == x.ActivityRecord.ActivityId),
+            Outcomes = x.Activity.GetPossibleOutcomes(workflowContext, x).ToArray(),
+        });
         var workflowTypeData = new
         {
             workflowType.Id,
             workflowType.Name,
             workflowType.IsEnabled,
-            Activities = activitiesDataQuery,
+            Activities = activitiesDataQuery.ToArray(),
             workflowType.Transitions,
         };
 

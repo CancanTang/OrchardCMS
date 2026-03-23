@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
 
-namespace OrchardCore.Email.Services;
+namespace OrchardCore.Email.Core.Services;
 
 public sealed class EmailOptionsConfiguration : IConfigureOptions<EmailOptions>
 {
@@ -18,7 +18,9 @@ public sealed class EmailOptionsConfiguration : IConfigureOptions<EmailOptions>
 
     public void Configure(EmailOptions options)
     {
-        var emailSettings = _siteService.GetSettings<EmailSettings>();
+        var emailSettings = _siteService.GetSettingsAsync<EmailSettings>()
+            .GetAwaiter()
+            .GetResult();
 
         if (!string.IsNullOrEmpty(emailSettings.DefaultProviderName)
             && _emailProviderOptions.Providers.TryGetValue(emailSettings.DefaultProviderName, out var provider)

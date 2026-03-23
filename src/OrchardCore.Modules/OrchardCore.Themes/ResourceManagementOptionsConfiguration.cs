@@ -27,6 +27,7 @@ public sealed class ResourceManagementOptionsConfiguration
                 "~/OrchardCore.Themes/Scripts/theme-manager/theme-manager.js"
             )
             .SetDependencies("theme-head")
+            .SetAttribute("type", "module")
             .SetVersion("1.0.0");
     }
 

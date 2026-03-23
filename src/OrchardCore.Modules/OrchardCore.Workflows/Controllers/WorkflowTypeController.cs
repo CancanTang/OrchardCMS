@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.IO.Compression;
-using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Dapper;
@@ -406,28 +405,23 @@ public sealed class WorkflowTypeController : Controller
             activityDesignShapes.Add(await BuildActivityDisplay(activityContext, index++, id, newLocalId, "Design"));
         }
 
-        var activitiesDataQuery = new List<object>();
-
-        foreach (var activityContext in activityContexts)
+        var activitiesDataQuery = activityContexts.Select(x => new
         {
-            activitiesDataQuery.Add(new
-            {
-                Id = activityContext.ActivityRecord.ActivityId,
-                activityContext.ActivityRecord.X,
-                activityContext.ActivityRecord.Y,
-                activityContext.ActivityRecord.Name,
-                activityContext.ActivityRecord.IsStart,
-                IsEvent = activityContext.Activity.IsEvent(),
-                Outcomes = (await activityContext.Activity.GetPossibleOutcomesAsync(workflowContext, activityContext)).ToArray(),
-            });
-        }
+            Id = x.ActivityRecord.ActivityId,
+            x.ActivityRecord.X,
+            x.ActivityRecord.Y,
+            x.ActivityRecord.Name,
+            x.ActivityRecord.IsStart,
+            IsEvent = x.Activity.IsEvent(),
+            Outcomes = x.Activity.GetPossibleOutcomes(workflowContext, x).ToArray(),
+        });
 
         var workflowTypeData = new
         {
             workflowType.Id,
             workflowType.Name,
             workflowType.IsEnabled,
-            Activities = activitiesDataQuery,
+            Activities = activitiesDataQuery.ToArray(),
             workflowType.Transitions,
         };
 
@@ -580,7 +574,7 @@ public sealed class WorkflowTypeController : Controller
             ? workflowTypes.FirstOrDefault().Name
             : S["Workflow Types"];
 
-        return new PhysicalFileResult(archiveFileName, MediaTypeNames.Application.Zip)
+        return new PhysicalFileResult(archiveFileName, "application/zip")
         {
             FileDownloadName = packageName + ".zip",
         };

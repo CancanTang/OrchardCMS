@@ -4,7 +4,6 @@ using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
-using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Title.Models;
 using OrchardCore.Title.ViewModels;
 
@@ -12,15 +11,13 @@ namespace OrchardCore.Title.Settings;
 
 public sealed class TitlePartSettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<TitlePart>
 {
-    private readonly ILiquidTemplateManager _liquidTemplateManager;
+    private readonly ILiquidTemplateManager _templateManager;
 
     internal readonly IStringLocalizer S;
 
-    public TitlePartSettingsDisplayDriver(
-        ILiquidTemplateManager liquidTemplateManager,
-        IStringLocalizer<TitlePartSettingsDisplayDriver> localizer)
+    public TitlePartSettingsDisplayDriver(ILiquidTemplateManager templateManager, IStringLocalizer<TitlePartSettingsDisplayDriver> localizer)
     {
-        _liquidTemplateManager = liquidTemplateManager;
+        _templateManager = templateManager;
         S = localizer;
     }
 
@@ -34,7 +31,6 @@ public sealed class TitlePartSettingsDisplayDriver : ContentTypePartDefinitionDi
             model.Pattern = settings.Pattern;
             model.RenderTitle = settings.RenderTitle;
             model.TitlePartSettings = settings;
-            model.Placeholder = settings.Placeholder;
         }).Location("Content");
     }
 
@@ -45,28 +41,16 @@ public sealed class TitlePartSettingsDisplayDriver : ContentTypePartDefinitionDi
         await context.Updater.TryUpdateModelAsync(model, Prefix,
             m => m.Pattern,
             m => m.Options,
-            m => m.RenderTitle,
-            m => m.Placeholder);
+            m => m.RenderTitle);
 
-        if (model.Options == TitlePartOptions.GeneratedHidden || model.Options == TitlePartOptions.GeneratedDisabled)
+        if (!string.IsNullOrEmpty(model.Pattern) && !_templateManager.Validate(model.Pattern, out var errors))
         {
-            if (string.IsNullOrWhiteSpace(model.Pattern))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Pattern), S["A pattern is required when using the selected behavior option."]);
-            }
-            else if (!_liquidTemplateManager.Validate(model.Pattern, out var errors))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Pattern), S["The pattern doesn't contain a valid Liquid expression. Details: {0}", string.Join(' ', errors)]);
-            }
+            context.Updater.ModelState.AddModelError(nameof(model.Pattern), S["Pattern doesn't contain a valid Liquid expression. Details: {0}", string.Join(" ", errors)]);
         }
-
-        context.Builder.WithSettings(new TitlePartSettings
+        else
         {
-            Pattern = model.Pattern,
-            Options = model.Options,
-            RenderTitle = model.RenderTitle,
-            Placeholder = model.Placeholder,
-        });
+            context.Builder.WithSettings(new TitlePartSettings { Pattern = model.Pattern, Options = model.Options, RenderTitle = model.RenderTitle });
+        }
 
         return Edit(contentTypePartDefinition, context);
     }

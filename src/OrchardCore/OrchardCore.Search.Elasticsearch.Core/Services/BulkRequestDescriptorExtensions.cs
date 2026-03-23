@@ -6,7 +6,7 @@ namespace OrchardCore.Search.Elasticsearch.Core.Services;
 
 internal static class BulkRequestDescriptorExtensions
 {
-    public static BulkRequestDescriptor CreateElasticDocument(this BulkRequestDescriptor descriptor, IEnumerable<ContentItemDocumentIndex> documentIndex)
+    public static BulkRequestDescriptor CreateElasticDocument(this BulkRequestDescriptor descriptor, IEnumerable<DocumentIndex> documentIndex)
     {
         foreach (var document in documentIndex)
         {
@@ -16,26 +16,26 @@ internal static class BulkRequestDescriptorExtensions
         return descriptor;
     }
 
-    private static Dictionary<string, object> CreateElasticDocument(ContentItemDocumentIndex documentIndex)
+    private static Dictionary<string, object> CreateElasticDocument(DocumentIndex documentIndex)
     {
         var entries = new Dictionary<string, object>
         {
-            { ContentIndexingConstants.ContentItemIdKey, documentIndex.ContentItemId },
-            { ContentIndexingConstants.ContentItemVersionIdKey, documentIndex.ContentItemVersionId },
+            { IndexingConstants.ContentItemIdKey, documentIndex.ContentItemId },
+            { IndexingConstants.ContentItemVersionIdKey, documentIndex.ContentItemVersionId },
         };
 
         foreach (var entry in documentIndex.Entries)
         {
             switch (entry.Type)
             {
-                case DocumentIndex.Types.Boolean:
+                case DocumentIndexBase.Types.Boolean:
                     if (entry.Value is bool boolValue)
                     {
                         AddValue(entries, entry.Name, boolValue);
                     }
                     break;
 
-                case DocumentIndex.Types.DateTime:
+                case DocumentIndexBase.Types.DateTime:
 
                     if (entry.Value is DateTimeOffset offsetValue)
                     {
@@ -48,7 +48,7 @@ internal static class BulkRequestDescriptorExtensions
 
                     break;
 
-                case DocumentIndex.Types.Integer:
+                case DocumentIndexBase.Types.Integer:
                     if (entry.Value != null && long.TryParse(entry.Value.ToString(), out var value))
                     {
                         AddValue(entries, entry.Name, value);
@@ -56,14 +56,14 @@ internal static class BulkRequestDescriptorExtensions
 
                     break;
 
-                case DocumentIndex.Types.Number:
+                case DocumentIndexBase.Types.Number:
                     if (entry.Value != null)
                     {
                         AddValue(entries, entry.Name, Convert.ToDouble(entry.Value));
                     }
                     break;
 
-                case DocumentIndex.Types.Text:
+                case DocumentIndexBase.Types.Text:
                     if (entry.Value != null)
                     {
                         var stringValue = Convert.ToString(entry.Value);
@@ -74,8 +74,8 @@ internal static class BulkRequestDescriptorExtensions
                         }
                     }
                     break;
-                case DocumentIndex.Types.GeoPoint:
-                    if (entry.Value is DocumentIndex.GeoPoint point)
+                case DocumentIndexBase.Types.GeoPoint:
+                    if (entry.Value is DocumentIndexBase.GeoPoint point)
                     {
                         AddValue(entries, entry.Name, GeoLocation.LatitudeLongitude(new LatLonGeoLocation
                         {

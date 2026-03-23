@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using OrchardCore.ResourceManagement;
 
 namespace OrchardCore.Tests.ResourceManagement;
@@ -149,7 +148,7 @@ public class ResourceDefinitionTests
         var tagBuilder = resourceDefinition.GetTagBuilder(requireSettings, applicationPath, StubFileVersionProvider.Instance);
 
         Assert.Equal("link", tagBuilder.TagName);
-        Assert.Equal(MediaTypeNames.Text.Css, tagBuilder.Attributes["type"]);
+        Assert.Equal("text/css", tagBuilder.Attributes["type"]);
         Assert.Equal("stylesheet", tagBuilder.Attributes["rel"]);
         Assert.Equal($"{applicationPath}/foo.css", tagBuilder.Attributes["href"]);
     }
@@ -168,7 +167,7 @@ public class ResourceDefinitionTests
         var tagBuilder = resourceDefinition.GetTagBuilder(requireSettings, applicationPath, StubFileVersionProvider.Instance);
 
         Assert.Equal("link", tagBuilder.TagName);
-        Assert.Equal(MediaTypeNames.Text.Css, tagBuilder.Attributes["type"]);
+        Assert.Equal("text/css", tagBuilder.Attributes["type"]);
         Assert.Equal("stylesheet", tagBuilder.Attributes["rel"]);
         Assert.Equal($"{applicationPath}/foo.debug.css", tagBuilder.Attributes["href"]);
     }
@@ -187,7 +186,7 @@ public class ResourceDefinitionTests
         var tagBuilder = resourceDefinition.GetTagBuilder(requireSettings, applicationPath, StubFileVersionProvider.Instance);
 
         Assert.Equal("link", tagBuilder.TagName);
-        Assert.Equal(MediaTypeNames.Text.Css, tagBuilder.Attributes["type"]);
+        Assert.Equal("text/css", tagBuilder.Attributes["type"]);
         Assert.Equal("stylesheet", tagBuilder.Attributes["rel"]);
         Assert.Equal("https://cdn.tld/foo.css", tagBuilder.Attributes["href"]);
     }
@@ -210,7 +209,7 @@ public class ResourceDefinitionTests
         var tagBuilder = resourceDefinition.GetTagBuilder(requireSettings, applicationPath, StubFileVersionProvider.Instance);
 
         Assert.Equal("link", tagBuilder.TagName);
-        Assert.Equal(MediaTypeNames.Text.Css, tagBuilder.Attributes["type"]);
+        Assert.Equal("text/css", tagBuilder.Attributes["type"]);
         Assert.Equal("stylesheet", tagBuilder.Attributes["rel"]);
         Assert.Equal(expected, tagBuilder.Attributes["href"]);
     }
@@ -229,7 +228,7 @@ public class ResourceDefinitionTests
         var tagBuilder = resourceDefinition.GetTagBuilder(requireSettings, applicationPath, StubFileVersionProvider.Instance);
 
         Assert.Equal("link", tagBuilder.TagName);
-        Assert.Equal(MediaTypeNames.Text.Css, tagBuilder.Attributes["type"]);
+        Assert.Equal("text/css", tagBuilder.Attributes["type"]);
         Assert.Equal("stylesheet", tagBuilder.Attributes["rel"]);
         Assert.Equal("https://cdn.tld/foo.debug.css", tagBuilder.Attributes["href"]);
     }
@@ -249,7 +248,7 @@ public class ResourceDefinitionTests
         var tagBuilder = resourceDefinition.GetTagBuilder(requireSettings, applicationPath, StubFileVersionProvider.Instance);
 
         Assert.Equal("link", tagBuilder.TagName);
-        Assert.Equal(MediaTypeNames.Text.Css, tagBuilder.Attributes["type"]);
+        Assert.Equal("text/css", tagBuilder.Attributes["type"]);
         Assert.Equal("stylesheet", tagBuilder.Attributes["rel"]);
         Assert.Equal("foo", tagBuilder.Attributes["id"]);
         Assert.Equal("all", tagBuilder.Attributes["media"]);

@@ -1,6 +1,5 @@
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Removing;
 using OrchardCore.Modules;
 
@@ -15,10 +14,10 @@ internal sealed class BlobModularTenantEvents : ModularTenantEvents
     private readonly ILogger _logger;
 
     public BlobModularTenantEvents(
-        IOptions<BlobOptions> blobOptions,
+        BlobOptions blobOptions,
         ILogger<BlobModularTenantEvents> logger)
     {
-        _blobOptions = blobOptions.Value;
+        _blobOptions = blobOptions;
         _logger = logger;
     }
 
@@ -33,10 +32,7 @@ internal sealed class BlobModularTenantEvents : ModularTenantEvents
             _blobOptions.ContainerName,
             _blobOptions.BlobName);
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Deleting blob '{BlobName}' from container '{ContainerName}'.", _blobOptions.BlobName, _blobOptions.ContainerName);
-        }
+        _logger.LogDebug("Deleting blob '{BlobName}' from container '{ContainerName}'.", _blobOptions.BlobName, _blobOptions.ContainerName);
 
         return blobClient.DeleteIfExistsAsync();
     }

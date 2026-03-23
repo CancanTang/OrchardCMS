@@ -51,6 +51,7 @@ public class Module
                 ModuleInfo.Description = Application.ModuleDescription;
                 ModuleInfo.Priority = Application.ModulePriority;
                 ModuleInfo.Category = Application.ModuleCategory;
+                ModuleInfo.DefaultTenantOnly = true;
 
                 // Adds the application primary feature.
                 features.Insert(0, new Manifest.FeatureAttribute(
@@ -60,7 +61,7 @@ public class Module
                     Application.ModulePriority,
                     Application.ModuleDescription,
                     null,
-                    default,
+                    true,
                     default,
                     default
                 ));
@@ -73,7 +74,7 @@ public class Module
                     Application.ModulePriority,
                     Application.DefaultFeatureDescription,
                     null,
-                    default,
+                    true,
                     default,
                     default
                 ));

@@ -42,7 +42,6 @@ using OrchardCore.Feeds;
 using OrchardCore.Indexing;
 using OrchardCore.Liquid;
 using OrchardCore.Lists.Settings;
-using OrchardCore.Localization.Data;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
@@ -151,11 +150,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentHandler, ContentsHandler>();
         services.AddRecipeExecutionStep<ContentStep>();
 
-        services.AddScoped<IDocumentIndexHandler, FullTextContentIndexHandler>();
-        services.AddScoped<IDocumentIndexHandler, AspectsContentIndexHandler>();
-        services.AddScoped<IDocumentIndexHandler, DefaultContentIndexHandler>();
+        services.AddScoped<IContentItemIndexHandler, FullTextContentIndexHandler>();
+        services.AddScoped<IContentItemIndexHandler, AspectsContentIndexHandler>();
+        services.AddScoped<IContentItemIndexHandler, DefaultContentIndexHandler>();
         services.AddScoped<IContentHandleProvider, ContentItemIdHandleProvider>();
-        services.AddScoped<IDocumentIndexHandler, ContentItemIndexCoordinator>();
+        services.AddScoped<IContentItemIndexHandler, ContentItemIndexCoordinator>();
 
         services.AddDataMigration<Migrations>();
 
@@ -294,15 +293,5 @@ public sealed class FeedsStartup : StartupBase
     {
         // Feeds
         services.AddScoped<IFeedItemBuilder, CommonFeedItemBuilder>();
-    }
-}
-
-[RequireFeatures("OrchardCore.DataLocalization")]
-public sealed class DataLocalizationStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ILocalizationDataProvider, ContentTypeDataLocalizationProvider>();
-        services.AddScoped<ILocalizationDataProvider, ContentFieldDataLocalizationProvider>();
     }
 }

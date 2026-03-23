@@ -1,10 +1,11 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Html;
 using OrchardCore.DisplayManagement.Implementation;
 using OrchardCore.Environment.Extensions.Features;
 
 namespace OrchardCore.DisplayManagement.Descriptors;
 
-public sealed class FeatureShapeDescriptor : ShapeDescriptor
+public class FeatureShapeDescriptor : ShapeDescriptor
 {
     public FeatureShapeDescriptor(IFeatureInfo feature, string shapeType)
     {
@@ -12,104 +13,65 @@ public sealed class FeatureShapeDescriptor : ShapeDescriptor
         ShapeType = shapeType;
     }
 
-    public IFeatureInfo Feature { get; }
+    public IFeatureInfo Feature { get; private set; }
 }
 
-public sealed class ShapeDescriptorIndex : ShapeDescriptor
+public class ShapeDescriptorIndex : ShapeDescriptor
 {
-    private readonly List<FeatureShapeDescriptor> _alterationDescriptors;
-    private readonly IReadOnlyList<string> _wrappers;
-    private readonly IReadOnlyList<Func<ShapeCreatingContext, Task>> _creatingAsync;
-    private readonly IReadOnlyList<Func<ShapeCreatedContext, Task>> _createdAsync;
-    private readonly IReadOnlyList<Func<ShapeDisplayContext, Task>> _displayingAsync;
-    private readonly IReadOnlyList<Func<ShapeDisplayContext, Task>> _processingAsync;
-    private readonly IReadOnlyList<Func<ShapeDisplayContext, Task>> _displayedAsync;
+    private readonly List<FeatureShapeDescriptor> _alternationDescriptors = [];
+    private readonly List<string> _wrappers = [];
+    private readonly List<string> _bindingSources = [];
+    private readonly Dictionary<string, ShapeBinding> _bindings = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<Func<ShapeCreatingContext, Task>> _creatingAsync = [];
+    private readonly List<Func<ShapeCreatedContext, Task>> _createdAsync = [];
+    private readonly List<Func<ShapeDisplayContext, Task>> _displayingAsync = [];
+    private readonly List<Func<ShapeDisplayContext, Task>> _processingAsync = [];
+    private readonly List<Func<ShapeDisplayContext, Task>> _displayedAsync = [];
 
     public ShapeDescriptorIndex(
         string shapeType,
-        IEnumerable<FeatureShapeDescriptor> alterations)
+        IEnumerable<string> alterationKeys,
+        ConcurrentDictionary<string, FeatureShapeDescriptor> descriptors)
     {
         ArgumentException.ThrowIfNullOrEmpty(shapeType);
 
         ShapeType = shapeType;
 
-        List<string> wrappers = null;
-        List<Func<ShapeCreatingContext, Task>> creatingAsync = null;
-        List<Func<ShapeCreatedContext, Task>> createdAsync = null;
-        List<Func<ShapeDisplayContext, Task>> displayingAsync = null;
-        List<Func<ShapeDisplayContext, Task>> processingAsync = null;
-        List<Func<ShapeDisplayContext, Task>> displayedAsync = null;
-        var bindingSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         // Pre-calculate as much as we can for performance reasons.
-        foreach (var alterationDescriptor in alterations)
+        foreach (var alterationKey in alterationKeys)
         {
-            _alterationDescriptors ??= [];
-            _alterationDescriptors.Add(alterationDescriptor);
-
-            if (alterationDescriptor.Wrappers.Count > 0)
+            if (!descriptors.TryGetValue(alterationKey, out var alternationDescriptor))
             {
-                wrappers ??= [];
-                wrappers.AddRange(alterationDescriptor.Wrappers);
+                continue;
             }
 
-            if (alterationDescriptor.CreatingAsync.Count > 0)
-            {
-                creatingAsync ??= [];
-                creatingAsync.AddRange(alterationDescriptor.CreatingAsync);
-            }
+            _alternationDescriptors.Add(alternationDescriptor);
+            _wrappers.AddRange(alternationDescriptor.Wrappers);
+            _bindingSources.AddRange(alternationDescriptor.BindingSources);
+            _creatingAsync.AddRange(alternationDescriptor.CreatingAsync);
+            _createdAsync.AddRange(alternationDescriptor.CreatedAsync);
+            _displayingAsync.AddRange(alternationDescriptor.DisplayingAsync);
+            _displayedAsync.AddRange(alternationDescriptor.DisplayedAsync);
+            _processingAsync.AddRange(alternationDescriptor.ProcessingAsync);
 
-            if (alterationDescriptor.CreatedAsync.Count > 0)
+            foreach (var binding in alternationDescriptor.Bindings)
             {
-                createdAsync ??= [];
-                createdAsync.AddRange(alterationDescriptor.CreatedAsync);
-            }
-
-            if (alterationDescriptor.DisplayingAsync.Count > 0)
-            {
-                displayingAsync ??= [];
-                displayingAsync.AddRange(alterationDescriptor.DisplayingAsync);
-            }
-
-            if (alterationDescriptor.ProcessingAsync.Count > 0)
-            {
-                processingAsync ??= [];
-                processingAsync.AddRange(alterationDescriptor.ProcessingAsync);
-            }
-
-            if (alterationDescriptor.DisplayedAsync.Count > 0)
-            {
-                displayedAsync ??= [];
-                displayedAsync.AddRange(alterationDescriptor.DisplayedAsync);
-            }
-
-            foreach (var binding in alterationDescriptor.Bindings)
-            {
-                // Only add the first binding for each binding source. This ensures that only the
-                // first binding of a extension is used, and that overrides are not ignored.
-                if (bindingSources.Add(binding.Value.BindingSource))
-                {
-                    Bindings[binding.Key] = binding.Value;
-                }
+                _bindings[binding.Key] = binding.Value;
             }
         }
-
-        _wrappers = wrappers;
-        _creatingAsync = creatingAsync;
-        _createdAsync = createdAsync;
-        _displayingAsync = displayingAsync;
-        _processingAsync = processingAsync;
-        _displayedAsync = displayedAsync;
-
-        // Ensure none of these are null. This is done separately to make sure the []
-        // operator is converted to Array.Empty<T>() at compile time.
-        _wrappers ??= [];
-        _creatingAsync ??= [];
-        _createdAsync ??= [];
-        _displayingAsync ??= [];
-        _processingAsync ??= [];
-        _displayedAsync ??= [];
     }
+
+    /// <summary>
+    /// The BindingSource is informational text about the source of the Binding delegate. Not used except for
+    /// troubleshooting.
+    /// </summary>
+    public override string BindingSource =>
+        Bindings.TryGetValue(ShapeType, out var binding) ? binding.BindingSource : null;
+
+    public override Func<DisplayContext, Task<IHtmlContent>> Binding =>
+        Bindings.TryGetValue(ShapeType, out var binding) ? binding.BindingAsync : null;
+
+    public override IDictionary<string, ShapeBinding> Bindings => _bindings;
 
     public override IReadOnlyList<Func<ShapeCreatingContext, Task>> CreatingAsync => _creatingAsync;
 
@@ -123,19 +85,12 @@ public sealed class ShapeDescriptorIndex : ShapeDescriptor
 
     public override Func<ShapePlacementContext, PlacementInfo> Placement => CalculatePlacement;
 
-    public override IReadOnlyList<string> Wrappers => _wrappers;
-
     private PlacementInfo CalculatePlacement(ShapePlacementContext ctx)
     {
-        if (_alterationDescriptors == null)
-        {
-            return DefaultPlacementAction(ctx);
-        }
-
         PlacementInfo info = null;
-        for (var i = _alterationDescriptors.Count - 1; i >= 0; i--)
+        for (var i = _alternationDescriptors.Count - 1; i >= 0; i--)
         {
-            var descriptor = _alterationDescriptors[i];
+            var descriptor = _alternationDescriptors[i];
             info = descriptor.Placement(ctx);
             if (info != null)
             {
@@ -145,41 +100,18 @@ public sealed class ShapeDescriptorIndex : ShapeDescriptor
 
         return info ?? DefaultPlacementAction(ctx);
     }
+
+    public override IReadOnlyList<string> Wrappers => _wrappers;
+
+    public override IReadOnlyList<string> BindingSources => _bindingSources;
 }
 
 public class ShapeDescriptor
 {
-    private Func<ShapePlacementContext, PlacementInfo> _placement;
-
-    public string ShapeType { get; set; }
-
-    /// <summary>
-    /// The BindingSource is informational text about the source of the Binding delegate. Not used except for
-    /// troubleshooting.
-    /// </summary>
-    public string BindingSource
-        => Bindings.TryGetValue(ShapeType, out var binding) ? binding.BindingSource : null;
-
-    public Func<DisplayContext, Task<IHtmlContent>> Binding
-        => Bindings.TryGetValue(ShapeType, out var binding) ? binding.BindingAsync : null;
-
-    public IDictionary<string, ShapeBinding> Bindings { get; } = new Dictionary<string, ShapeBinding>(StringComparer.OrdinalIgnoreCase);
-
-    public virtual IReadOnlyList<Func<ShapeCreatingContext, Task>> CreatingAsync { get; set; } = [];
-
-    public virtual IReadOnlyList<Func<ShapeCreatedContext, Task>> CreatedAsync { get; set; } = [];
-
-    public virtual IReadOnlyList<Func<ShapeDisplayContext, Task>> DisplayingAsync { get; set; } = [];
-
-    public virtual IReadOnlyList<Func<ShapeDisplayContext, Task>> ProcessingAsync { get; set; } = [];
-
-    public virtual IReadOnlyList<Func<ShapeDisplayContext, Task>> DisplayedAsync { get; set; } = [];
-
-    public virtual Func<ShapePlacementContext, PlacementInfo> Placement { get => _placement ??= DefaultPlacementAction; set => _placement = value; }
-
-    public string DefaultPlacement { get; set; }
-
-    public virtual IReadOnlyList<string> Wrappers { get; set; } = [];
+    public ShapeDescriptor()
+    {
+        Placement = DefaultPlacementAction;
+    }
 
     protected PlacementInfo DefaultPlacementAction(ShapePlacementContext context)
     {
@@ -189,13 +121,42 @@ public class ShapeDescriptor
             return null;
         }
 
-        return PlacementInfo.FromLocation(DefaultPlacement);
+        return new PlacementInfo
+        {
+            Location = DefaultPlacement,
+        };
     }
+
+    public string ShapeType { get; set; }
+
+    /// <summary>
+    /// The BindingSource is informational text about the source of the Binding delegate. Not used except for
+    /// troubleshooting.
+    /// </summary>
+    public virtual string BindingSource =>
+        Bindings.TryGetValue(ShapeType, out var binding) ? binding.BindingSource : null;
+
+    public virtual Func<DisplayContext, Task<IHtmlContent>> Binding =>
+        Bindings[ShapeType].BindingAsync;
+
+    public virtual IDictionary<string, ShapeBinding> Bindings { get; } = new Dictionary<string, ShapeBinding>(StringComparer.OrdinalIgnoreCase);
+
+    public virtual IReadOnlyList<Func<ShapeCreatingContext, Task>> CreatingAsync { get; set; } = [];
+    public virtual IReadOnlyList<Func<ShapeCreatedContext, Task>> CreatedAsync { get; set; } = [];
+    public virtual IReadOnlyList<Func<ShapeDisplayContext, Task>> DisplayingAsync { get; set; } = [];
+    public virtual IReadOnlyList<Func<ShapeDisplayContext, Task>> ProcessingAsync { get; set; } = [];
+    public virtual IReadOnlyList<Func<ShapeDisplayContext, Task>> DisplayedAsync { get; set; } = [];
+
+    public virtual Func<ShapePlacementContext, PlacementInfo> Placement { get; set; }
+    public string DefaultPlacement { get; set; }
+
+    public virtual IReadOnlyList<string> Wrappers { get; set; } = [];
+    public virtual IReadOnlyList<string> BindingSources { get; set; } = [];
 }
 
-public sealed class ShapeBinding
+public class ShapeBinding
 {
     public string BindingName { get; set; }
     public string BindingSource { get; set; }
-    public Func<DisplayContext, Task<IHtmlContent>> BindingAsync { get; set; }
+    public virtual Func<DisplayContext, Task<IHtmlContent>> BindingAsync { get; set; }
 }

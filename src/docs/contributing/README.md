@@ -11,7 +11,6 @@ One of the easiest ways to contribute is to participate in discussions under [Gi
 - [Contributing documentation](contributing-documentation.md)
 - [Reviewing pull requests](reviewing-pull-requests.md)
 - [Benchmarking](benchmarking.md)
-- [Contributing to orchardcore.net](contributing-to-orchardcore-net.md)
 
 ## Contributor License Agreement
 

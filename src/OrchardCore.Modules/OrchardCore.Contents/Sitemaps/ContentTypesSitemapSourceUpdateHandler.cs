@@ -32,7 +32,6 @@ public class ContentTypesSitemapSourceUpdateHandler : ISitemapSourceUpdateHandle
         }
 
         var contentTypeName = contentItem.ContentType;
-        var sitemapNeedsUpdate = false;
 
         foreach (var sitemap in sitemaps)
         {
@@ -48,27 +47,21 @@ public class ContentTypesSitemapSourceUpdateHandler : ISitemapSourceUpdateHandle
                 if (source.IndexAll)
                 {
                     sitemap.Identifier = IdGenerator.GenerateId();
-                    sitemapNeedsUpdate = true;
                     break;
                 }
                 else if (source.LimitItems && string.Equals(source.LimitedContentType.ContentTypeName, contentTypeName, StringComparison.Ordinal))
                 {
                     sitemap.Identifier = IdGenerator.GenerateId();
-                    sitemapNeedsUpdate = true;
                     break;
                 }
                 else if (source.ContentTypes.Any(ct => string.Equals(ct.ContentTypeName, contentTypeName, StringComparison.Ordinal)))
                 {
                     sitemap.Identifier = IdGenerator.GenerateId();
-                    sitemapNeedsUpdate = true;
                     break;
                 }
             }
         }
 
-        if (sitemapNeedsUpdate)
-        {
-            await _sitemapManager.UpdateSitemapAsync();
-        }
+        await _sitemapManager.UpdateSitemapAsync();
     }
 }

@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Entities;
-using OrchardCore.Indexing;
 using OrchardCore.Liquid;
 using OrchardCore.Queries;
 using OrchardCore.Search.Elasticsearch.Models;
@@ -17,11 +16,10 @@ namespace OrchardCore.Search.Elasticsearch.Core.Services;
 
 public sealed class ElasticsearchQuerySource : IQuerySource
 {
-    public const string SourceName = ElasticsearchConstants.ProviderName;
+    public const string SourceName = "Elasticsearch";
 
     private readonly ElasticsearchQueryService _queryService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IIndexProfileStore _indexProfileStore;
     private readonly ISession _session;
     private readonly JavaScriptEncoder _javaScriptEncoder;
     private readonly TemplateOptions _templateOptions;
@@ -29,14 +27,12 @@ public sealed class ElasticsearchQuerySource : IQuerySource
     public ElasticsearchQuerySource(
         ElasticsearchQueryService queryService,
         ILiquidTemplateManager liquidTemplateManager,
-        IIndexProfileStore indexProfileStore,
         ISession session,
         JavaScriptEncoder javaScriptEncoder,
         IOptions<TemplateOptions> templateOptions)
     {
         _queryService = queryService;
         _liquidTemplateManager = liquidTemplateManager;
-        _indexProfileStore = indexProfileStore;
         _session = session;
         _javaScriptEncoder = javaScriptEncoder;
         _templateOptions = templateOptions.Value;
@@ -48,28 +44,14 @@ public sealed class ElasticsearchQuerySource : IQuerySource
     public async Task<IQueryResults> ExecuteQueryAsync(Query query, IDictionary<string, object> parameters)
     {
         var metadata = query.As<ElasticsearchQueryMetadata>();
-        var elasticQueryResults = new ElasticsearchQueryResults()
-        {
-            // We always return an empty collection if the bottom lines queries have no results.
-            Items = [],
-        };
+        var elasticQueryResults = new ElasticsearchQueryResults();
 
         var tokenizedContent = await _liquidTemplateManager.RenderStringAsync(metadata?.Template, _javaScriptEncoder, parameters.Select(x => new KeyValuePair<string, FluidValue>(x.Key, FluidValue.Create(x.Value, _templateOptions))));
-
-        if (string.IsNullOrEmpty(metadata.Index))
-        {
-            return elasticQueryResults;
-        }
-
-        var index = await _indexProfileStore.FindByNameAsync(metadata.Index);
-
-        if (index is null || index.ProviderName != ElasticsearchConstants.ProviderName)
-        {
-            return elasticQueryResults;
-        }
-
-        var docs = await _queryService.SearchAsync(index, tokenizedContent);
+        var docs = await _queryService.SearchAsync(metadata?.Index, tokenizedContent);
         elasticQueryResults.Count = docs.Count;
+
+        // We always return an empty collection if the bottom lines queries have no results.
+        elasticQueryResults.Items = [];
 
         if (elasticQueryResults.Count == 0 || docs.TopDocs == null || docs.TopDocs.Count == 0)
         {

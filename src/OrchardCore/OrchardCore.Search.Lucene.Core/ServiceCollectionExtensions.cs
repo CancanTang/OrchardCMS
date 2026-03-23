@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Indexing.Core;
 using OrchardCore.Search.Lucene.QueryProviders;
 using OrchardCore.Search.Lucene.QueryProviders.Filters;
 
@@ -39,15 +38,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILuceneBooleanFilterProvider, TermFilterProvider>();
         services.AddSingleton<ILuceneBooleanFilterProvider, TermsFilterProvider>();
         services.AddSingleton<ILuceneBooleanFilterProvider, WildcardFilterProvider>();
-
-        return services;
-    }
-
-    public static IServiceCollection AddLuceneIndexingSource(this IServiceCollection services, string implementationType, Action<IndexingOptionsEntry> action = null)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(implementationType);
-
-        services.AddIndexingSource<LuceneIndexManager, LuceneIndexManager, LuceneIndexNameProvider>(LuceneConstants.ProviderName, implementationType, action);
 
         return services;
     }

@@ -11,15 +11,15 @@ public class ShellContextFeature
     /// <summary>
     /// The current shell context.
     /// </summary>
-    public ShellContext ShellContext { get; init; }
+    public ShellContext ShellContext { get; set; }
 
     /// <summary>
     /// The original path base.
     /// </summary>
-    public PathString OriginalPathBase { get; init; }
+    public PathString OriginalPathBase { get; set; }
 
     /// <summary>
     /// The original path.
     /// </summary>
-    public PathString OriginalPath { get; init; }
+    public PathString OriginalPath { get; set; }
 }

@@ -1,78 +1,54 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Deployment;
-using OrchardCore.Entities;
-using OrchardCore.Indexing;
-using OrchardCore.Indexing.Core.Models;
-using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Search.AzureAI.Models;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace OrchardCore.Search.AzureAI.Deployment;
 
 public sealed class AzureAISearchIndexDeploymentSource
     : DeploymentSourceBase<AzureAISearchIndexDeploymentStep>
 {
-    private readonly IIndexProfileStore _indexStore;
-    private readonly IEnumerable<IIndexProfileHandler> _handlers;
+    private readonly AzureAISearchIndexSettingsService _indexSettingsService;
+    private readonly IEnumerable<IAzureAISearchIndexSettingsHandler> _handlers;
     private readonly ILogger _logger;
 
     public AzureAISearchIndexDeploymentSource(
-        IIndexProfileStore indexStore,
-        IEnumerable<IIndexProfileHandler> handlers,
+        AzureAISearchIndexSettingsService indexSettingsService,
+        IEnumerable<IAzureAISearchIndexSettingsHandler> handlers,
         ILogger<AzureAISearchIndexDeploymentSource> logger)
     {
-        _indexStore = indexStore;
+        _indexSettingsService = indexSettingsService;
         _handlers = handlers;
         _logger = logger;
     }
 
     protected override async Task ProcessAsync(AzureAISearchIndexDeploymentStep step, DeploymentPlanResult result)
     {
-        var indexes = await _indexStore.GetByProviderAsync(AzureAISearchConstants.ProviderName);
+        var indexSettings = await _indexSettingsService.GetSettingsAsync();
 
         var data = new JsonArray();
 
         var indicesToAdd = step.IncludeAll
-            ? indexes.Select(x => x.IndexName).ToArray()
+            ? indexSettings.Select(x => x.IndexName).ToArray()
             : step.IndexNames;
 
-        foreach (var index in indexes)
+        foreach (var index in indexSettings)
         {
             if (index.IndexName == null || !indicesToAdd.Contains(index.IndexName))
             {
                 continue;
             }
 
-            var metadata = index.As<ContentIndexMetadata>();
-
-            var contentTypes = new JsonArray();
-
-            if (metadata.IndexedContentTypes != null)
-            {
-                foreach (var contentType in metadata.IndexedContentTypes)
-                {
-                    contentTypes.Add(contentType);
-                }
-            }
-
-            var indexMetadata = index.As<AzureAISearchIndexMetadata>();
-
             var indexInfo = new JsonObject()
             {
-                { "ProviderName", AzureAISearchConstants.ProviderName },
-                { "Type", index.Type },
-                { "Name", index.Name },
-                { "AnalyzerName", indexMetadata.AnalyzerName },
-                { "QueryAnalyzerName", index.As<AzureAISearchDefaultQueryMetadata>().QueryAnalyzerName },
-                { "IndexMappings", JArray.FromObject(indexMetadata.IndexMappings ?? []) },
-                { "IndexedContentTypes", contentTypes },
-                { "Culture", metadata.Culture },
-                { "IndexLatest", metadata.IndexLatest },
-                { "Properties", index.Properties?.DeepClone() },
+                { "IndexName", index.IndexName },
+                { "AnalyzerName", index.AnalyzerName },
+                { "QueryAnalyzerName", index.QueryAnalyzerName },
             };
 
-            var exportingContext = new IndexProfileExportingContext(index, indexInfo);
+            var exportingContext = new AzureAISearchIndexSettingsExportingContext(index, indexInfo);
 
             await _handlers.InvokeAsync((handler, context) => handler.ExportingAsync(context), exportingContext, _logger);
 

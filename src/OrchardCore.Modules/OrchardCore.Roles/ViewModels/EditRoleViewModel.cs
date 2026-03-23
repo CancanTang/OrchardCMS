@@ -21,7 +21,4 @@ public class EditRoleViewModel
 
     [BindNever]
     public Role Role { get; set; }
-
-    [BindNever]
-    public bool IsCloning { get; set; }
 }

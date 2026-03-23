@@ -72,19 +72,12 @@ public sealed class AdminController : Controller
 
         foreach (var role in roles.OrderBy(r => r.RoleName))
         {
-            var entry = new RoleEntry
+            model.RoleEntries.Add(new RoleEntry
             {
                 Name = role.RoleName,
                 Description = role.RoleDescription,
                 IsSystemRole = await _roleService.IsSystemRoleAsync(role.RoleName),
-            };
-
-            if (entry.IsSystemRole)
-            {
-                entry.IsAdminRole = await _roleService.IsAdminRoleAsync(role.RoleName);
-            }
-
-            model.RoleEntries.Add(entry);
+            });
         }
 
         return View(model);
@@ -110,7 +103,22 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        if (ModelState.IsValid && await ValidateRoleNameAsync(model.RoleName))
+        if (ModelState.IsValid)
+        {
+            model.RoleName = model.RoleName.Trim();
+
+            if (model.RoleName.Contains('/'))
+            {
+                ModelState.AddModelError(string.Empty, S["Invalid role name."]);
+            }
+
+            if (await _roleManager.FindByNameAsync(model.RoleName) != null)
+            {
+                ModelState.AddModelError(string.Empty, S["The role is already used."]);
+            }
+        }
+
+        if (ModelState.IsValid)
         {
             var role = new Role
             {
@@ -194,8 +202,19 @@ public sealed class AdminController : Controller
 
         if (!await _roleService.IsAdminRoleAsync(role.RoleName))
         {
+            var rolePermissions = new List<RoleClaim>();
+
+            foreach (var key in Request.Form.Keys)
+            {
+                if (key.StartsWith("Checkbox.", StringComparison.Ordinal) && Request.Form[key] == "true")
+                {
+                    var permissionName = key["Checkbox.".Length..];
+                    rolePermissions.Add(RoleClaim.Create(permissionName));
+                }
+            }
+
             role.RoleClaims.RemoveAll(c => c.ClaimType == Permission.ClaimType);
-            role.RoleClaims.AddRange(ExtractSelectedPermissions());
+            role.RoleClaims.AddRange(rolePermissions);
         }
 
         await _roleManager.UpdateAsync(role);
@@ -280,96 +299,6 @@ public sealed class AdminController : Controller
         return installedPermissions;
     }
 
-    public async Task<IActionResult> Clone(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, RolesPermissions.ManageRoles))
-        {
-            return Forbid();
-        }
-
-        if (await _roleManager.FindByIdAsync(id) is not Role role)
-        {
-            return NotFound();
-        }
-
-        var model = await GetEditRoleViewModelAsync(role, role.RoleName, role.RoleDescription);
-
-        return View(nameof(Edit), model);
-    }
-
-    [HttpPost]
-    [ActionName(nameof(Clone))]
-    public async Task<IActionResult> ClonePost(string id, string name, string roleDescription)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, RolesPermissions.ManageRoles))
-        {
-            return Forbid();
-        }
-
-        if (await _roleManager.FindByIdAsync(id) is not Role sourceRole)
-        {
-            return NotFound();
-        }
-
-        name = name?.Trim();
-
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            ModelState.AddModelError(string.Empty, S["Role name is required."]);
-        }
-
-        if (ModelState.IsValid && await ValidateRoleNameAsync(name))
-        {
-            var newRole = new Role
-            {
-                RoleName = name,
-                RoleDescription = roleDescription,
-                RoleClaims = [.. ExtractSelectedPermissions()],
-            };
-
-            var result = await _roleManager.CreateAsync(newRole);
-
-            if (result.Succeeded)
-            {
-                await _notifier.SuccessAsync(H["The role was cloned successfully."]);
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            await _documentStore.CancelAsync();
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-        }
-
-        var model = await GetEditRoleViewModelAsync(sourceRole, name, roleDescription);
-
-        return View(nameof(Edit), model);
-    }
-
-    private async Task<bool> ValidateRoleNameAsync(string roleName)
-    {
-        roleName = roleName.Trim();
-
-        if (roleName.Contains('/'))
-        {
-            ModelState.AddModelError(string.Empty, S["Invalid role name."]);
-
-            return false;
-        }
-
-        if (await _roleManager.FindByNameAsync(roleName) != null)
-        {
-            ModelState.AddModelError(string.Empty, S["The role name is already in use."]);
-
-            return false;
-        }
-
-        return true;
-    }
-
     private PermissionGroupKey GetGroupKey(IFeatureInfo feature, string category)
     {
         if (!string.IsNullOrWhiteSpace(category))
@@ -377,9 +306,7 @@ public sealed class AdminController : Controller
             return new PermissionGroupKey(category, category);
         }
 
-        var title = string.IsNullOrWhiteSpace(feature.Name)
-            ? S["{0} Feature", feature.Id]
-            : feature.Name;
+        var title = string.IsNullOrWhiteSpace(feature.Name) ? S["{0} Feature", feature.Id] : feature.Name;
 
         return new PermissionGroupKey(feature.Id, title)
         {
@@ -391,13 +318,10 @@ public sealed class AdminController : Controller
     {
         // Create a fake user to check the actual permissions. If the role is anonymous
         // IsAuthenticated needs to be false.
-        var authenticationType = !string.Equals(role.RoleName, OrchardCoreConstants.Roles.Anonymous, StringComparison.OrdinalIgnoreCase)
-            ? "FakeAuthenticationType"
-            : null;
+        var fakeIdentity = new ClaimsIdentity([new Claim(ClaimTypes.Role, role.RoleName)],
+            !string.Equals(role.RoleName, OrchardCoreConstants.Roles.Anonymous, StringComparison.OrdinalIgnoreCase) ? "FakeAuthenticationType" : null);
 
-        var fakeIdentity = new ClaimsIdentity([new Claim(ClaimTypes.Role, role.RoleName)], authenticationType);
-
-        // Add role claims.
+        // Add role claims
         fakeIdentity.AddClaims(role.RoleClaims.Select(c => c.ToClaim()));
 
         var fakePrincipal = new ClaimsPrincipal(fakeIdentity);
@@ -413,34 +337,5 @@ public sealed class AdminController : Controller
         }
 
         return result;
-    }
-
-    private IEnumerable<RoleClaim> ExtractSelectedPermissions()
-        => Request.Form.Keys
-            .Where(key => key.StartsWith("Checkbox.", StringComparison.Ordinal) && Request.Form[key] == "true")
-            .Select(key => RoleClaim.Create(key["Checkbox.".Length..]));
-
-    private async Task<EditRoleViewModel> GetEditRoleViewModelAsync(Role role, string cloneRoleName, string description)
-    {
-        var installedPermissions = await GetInstalledPermissionsAsync();
-        var allPermissions = installedPermissions.SelectMany(x => x.Value);
-
-        var model = new EditRoleViewModel
-        {
-            Role = role,
-            Name = cloneRoleName,
-            RoleDescription = description,
-            IsCloning = true,
-            RoleCategoryPermissions = installedPermissions,
-            EffectivePermissions = await GetEffectivePermissions(role, allPermissions),
-        };
-
-        ViewData["DuplicatedPermissions"] = allPermissions
-            .GroupBy(p => p.Name.ToUpperInvariant())
-            .Where(g => g.Count() > 1)
-            .Select(g => g.First().Name)
-            .ToArray();
-
-        return model;
     }
 }

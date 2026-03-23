@@ -1,23 +1,23 @@
 using System.Text.Json.Nodes;
 using OrchardCore.Deployment;
-using OrchardCore.Indexing;
-using OrchardCore.Indexing.Models;
+using OrchardCore.Search.Elasticsearch.Core.Models;
+using OrchardCore.Search.Elasticsearch.Core.Services;
 
 namespace OrchardCore.Search.Elasticsearch.Core.Deployment;
 
 public sealed class ElasticsearchIndexDeploymentSource
     : DeploymentSourceBase<ElasticsearchIndexDeploymentStep>
 {
-    private readonly IIndexProfileStore _indexStore;
+    private readonly ElasticsearchIndexSettingsService _elasticIndexSettingsService;
 
-    public ElasticsearchIndexDeploymentSource(IIndexProfileStore indexStore)
+    public ElasticsearchIndexDeploymentSource(ElasticsearchIndexSettingsService elasticIndexSettingsService)
     {
-        _indexStore = indexStore;
+        _elasticIndexSettingsService = elasticIndexSettingsService;
     }
 
     protected override async Task ProcessAsync(ElasticsearchIndexDeploymentStep step, DeploymentPlanResult result)
     {
-        var indexSettings = await _indexStore.GetByProviderAsync(ElasticsearchConstants.ProviderName);
+        var indexSettings = await _elasticIndexSettingsService.GetSettingsAsync();
 
         var data = new JsonArray();
         var indicesToAdd = step.IncludeAll
@@ -28,7 +28,7 @@ public sealed class ElasticsearchIndexDeploymentSource
         {
             if (indicesToAdd.Contains(index.IndexName))
             {
-                var indexSettingsDict = new Dictionary<string, IndexProfile>
+                var indexSettingsDict = new Dictionary<string, ElasticIndexSettings>
                 {
                     { index.IndexName, index },
                 };

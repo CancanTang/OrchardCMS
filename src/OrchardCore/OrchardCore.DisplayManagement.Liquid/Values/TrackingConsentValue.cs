@@ -37,12 +37,7 @@ internal sealed class TrackingConsentValue : FluidValue
 
     public override string ToStringValue() => "TrackingConsent";
 
-    public override ValueTask<FluidValue> GetValueAsync(string name, TemplateContext context) => GetValueInternal(name, context);
-
-    [Obsolete("GetValue is obsolete, prefer the GetValueAsync method.")]
-    protected override FluidValue GetValue(string name, TemplateContext context) => GetValueInternal(name, context);
-
-    private static FluidValue GetValueInternal(string name, TemplateContext context)
+    protected override FluidValue GetValue(string name, TemplateContext context)
     {
         var feature = GetTrackingFeature(context);
 

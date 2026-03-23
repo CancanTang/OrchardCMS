@@ -30,7 +30,7 @@ public sealed class ScheduledArchivingBackgroundTask : IBackgroundTask
         var itemsToArchive = await serviceProvider
             .GetRequiredService<ISession>()
             .QueryIndex<ArchiveLaterPartIndex>(index => index.Latest && index.Published && index.ScheduledArchiveDateTimeUtc < _clock.UtcNow)
-            .ListAsync(cancellationToken);
+            .ListAsync();
 
         if (!itemsToArchive.Any())
         {
@@ -50,10 +50,7 @@ public sealed class ScheduledArchivingBackgroundTask : IBackgroundTask
                 part.Apply();
             }
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Archiving scheduled content item {ContentItemId}.", contentItem.ContentItemId);
-            }
+            _logger.LogDebug("Archiving scheduled content item {ContentItemId}.", contentItem.ContentItemId);
 
             await contentManager.UnpublishAsync(contentItem);
         }

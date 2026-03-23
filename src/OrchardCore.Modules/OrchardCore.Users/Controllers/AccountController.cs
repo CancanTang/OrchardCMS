@@ -97,6 +97,7 @@ public sealed class AccountController : AccountBaseController
 
     [HttpPost]
     [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     [ActionName(nameof(Login))]
     public async Task<IActionResult> LoginPOST(string returnUrl = null)
     {
@@ -192,6 +193,7 @@ public sealed class AccountController : AccountBaseController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> LogOff(string returnUrl = null)
     {
         await _signInManager.SignOutAsync();
@@ -209,6 +211,7 @@ public sealed class AccountController : AccountBaseController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model, string returnUrl = null)
     {
         if (ModelState.IsValid)
@@ -227,8 +230,6 @@ public sealed class AccountController : AccountBaseController
                 return Redirect(Url.Action(nameof(ChangePasswordConfirmation)));
             }
         }
-
-        ViewData["ReturnUrl"] = returnUrl;
 
         return View(model);
     }

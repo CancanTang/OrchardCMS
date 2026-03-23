@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Builders;
 
-namespace OrchardCore.Email.Services;
+namespace OrchardCore.Email.Core.Services;
 
 public class DefaultEmailProviderResolver : IEmailProviderResolver
 {

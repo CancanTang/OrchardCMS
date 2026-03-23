@@ -1,5 +1,5 @@
-using OrchardCore.Media.Core.Processing;
-using OrchardCore.Media.Models;
+using Format = OrchardCore.Media.Processing.Format;
+using ResizeMode = OrchardCore.Media.Processing.ResizeMode;
 
 namespace OrchardCore.Media.Services;
 
@@ -20,35 +20,34 @@ public class MediaProfileService : IMediaProfileService
         if (mediaProfilesDocument.MediaProfiles.TryGetValue(name, out var mediaProfile))
         {
             var commands = new Dictionary<string, string>();
-
             if (mediaProfile.Width > 0)
             {
-                commands[MediaCommands.WidthCommand] = mediaProfile.Width.ToString();
+                commands["width"] = mediaProfile.Width.ToString();
             }
 
             if (mediaProfile.Height > 0)
             {
-                commands[MediaCommands.HeightCommand] = mediaProfile.Height.ToString();
+                commands["height"] = mediaProfile.Height.ToString();
             }
 
             if (mediaProfile.Mode != ResizeMode.Undefined)
             {
-                commands[MediaCommands.ResizeModeCommand] = mediaProfile.Mode.ToString().ToLower();
+                commands["rmode"] = mediaProfile.Mode.ToString().ToLower();
             }
 
             if (mediaProfile.Format != Format.Undefined)
             {
-                commands[MediaCommands.FormatCommand] = mediaProfile.Format.ToString().ToLower();
+                commands["format"] = mediaProfile.Format.ToString().ToLower();
             }
 
             if (mediaProfile.Quality > 0 && mediaProfile.Quality < 100)
             {
-                commands[MediaCommands.QualityCommand] = mediaProfile.Quality.ToString();
+                commands["quality"] = mediaProfile.Quality.ToString();
             }
 
             if (!string.IsNullOrEmpty(mediaProfile.BackgroundColor))
             {
-                commands[MediaCommands.BackgroundColorCommand] = mediaProfile.BackgroundColor;
+                commands["bgcolor"] = mediaProfile.BackgroundColor;
             }
 
             return commands;
@@ -56,7 +55,7 @@ public class MediaProfileService : IMediaProfileService
         else
         {
             return _nullProfile;
+
         }
     }
 }
-

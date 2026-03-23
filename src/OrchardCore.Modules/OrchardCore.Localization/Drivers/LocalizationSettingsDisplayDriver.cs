@@ -22,7 +22,6 @@ public sealed class LocalizationSettingsDisplayDriver : SiteDisplayDriver<Locali
 {
     public const string GroupId = "localization";
 
-    private readonly ILocalizationService _localizationService;
     private readonly IShellReleaseManager _shellReleaseManager;
     private readonly INotifier _notifier;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -36,7 +35,6 @@ public sealed class LocalizationSettingsDisplayDriver : SiteDisplayDriver<Locali
         => GroupId;
 
     public LocalizationSettingsDisplayDriver(
-        ILocalizationService localizationService,
         IShellReleaseManager shellReleaseManager,
         INotifier notifier,
         IHttpContextAccessor httpContextAccessor,
@@ -46,7 +44,6 @@ public sealed class LocalizationSettingsDisplayDriver : SiteDisplayDriver<Locali
         IStringLocalizer<LocalizationSettingsDisplayDriver> stringLocalizer
     )
     {
-        _localizationService = localizationService;
         _shellReleaseManager = shellReleaseManager;
         _notifier = notifier;
         _httpContextAccessor = httpContextAccessor;
@@ -70,7 +67,7 @@ public sealed class LocalizationSettingsDisplayDriver : SiteDisplayDriver<Locali
 
         return Initialize<LocalizationSettingsViewModel>("LocalizationSettings_Edit", model =>
         {
-            model.Cultures = _localizationService.GetAllCulturesAndAliases()
+            model.Cultures = ILocalizationService.GetAllCulturesAndAliases()
                 .Select(cultureInfo =>
                 {
                     return new CultureEntry
@@ -85,8 +82,6 @@ public sealed class LocalizationSettingsDisplayDriver : SiteDisplayDriver<Locali
             {
                 model.Cultures[0].IsDefault = true;
             }
-
-            model.FallBackToParentCultures = settings.FallBackToParentCulture;
         }).Location("Content:2")
         .OnGroup(SettingsGroupId);
     }
@@ -115,7 +110,6 @@ public sealed class LocalizationSettingsDisplayDriver : SiteDisplayDriver<Locali
         {
             // Invariant culture name is empty so a null value is bound.
             settings.DefaultCulture = model.DefaultCulture ?? string.Empty;
-            settings.FallBackToParentCulture = model.FallBackToParentCultures;
             settings.SupportedCultures = supportedCulture;
 
             if (!settings.SupportedCultures.Contains(settings.DefaultCulture))

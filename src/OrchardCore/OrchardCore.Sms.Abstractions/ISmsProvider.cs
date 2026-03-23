@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Localization;
-using OrchardCore.Infrastructure;
 
 namespace OrchardCore.Sms;
 
@@ -15,5 +14,5 @@ public interface ISmsProvider
     /// </summary>
     /// <param name="message">The message to send.</param>
     /// <returns>SmsResult object.</returns>
-    Task<Result> SendAsync(SmsMessage message);
+    Task<SmsResult> SendAsync(SmsMessage message);
 }

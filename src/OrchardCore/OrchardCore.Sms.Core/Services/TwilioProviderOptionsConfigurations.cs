@@ -17,7 +17,9 @@ public sealed class TwilioProviderOptionsConfigurations : IConfigureOptions<SmsP
     {
         var typeOptions = new SmsProviderTypeOptions(typeof(TwilioSmsProvider));
 
-        var settings = _siteService.GetSettings<TwilioSettings>();
+        var settings = _siteService.GetSettingsAsync<TwilioSettings>()
+            .GetAwaiter()
+            .GetResult();
 
         typeOptions.IsEnabled = settings.IsEnabled;
 

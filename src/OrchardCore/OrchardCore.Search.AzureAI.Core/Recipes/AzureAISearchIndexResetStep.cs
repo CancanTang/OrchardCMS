@@ -1,10 +1,10 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundJobs;
-using OrchardCore.Indexing;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Search.AzureAI.Deployment;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace OrchardCore.Search.AzureAI.Recipes;
 
@@ -31,18 +31,24 @@ public sealed class AzureAISearchIndexResetStep : NamedRecipeStepHandler
 
         await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(AzureAISearchIndexRebuildDeploymentSource.Name, async scope =>
         {
-            var indexProfileManager = scope.ServiceProvider.GetRequiredService<IIndexProfileManager>();
+            var indexSettingsService = scope.ServiceProvider.GetService<AzureAISearchIndexSettingsService>();
+            var indexManager = scope.ServiceProvider.GetRequiredService<AzureAISearchIndexManager>();
+            var indexDocumentManager = scope.ServiceProvider.GetRequiredService<AzureAIIndexDocumentManager>();
 
-            var indexes = model.IncludeAll
-            ? await indexProfileManager.GetByProviderAsync(AzureAISearchConstants.ProviderName)
-            : (await indexProfileManager.GetByProviderAsync(AzureAISearchConstants.ProviderName))
-                .Where(x => model.Indices.Contains(x.IndexName, StringComparer.OrdinalIgnoreCase));
+            var indexSettings = model.IncludeAll
+            ? await indexSettingsService.GetSettingsAsync()
+            : (await indexSettingsService.GetSettingsAsync()).Where(x => model.Indices.Contains(x.IndexName, StringComparer.OrdinalIgnoreCase));
 
-            foreach (var index in indexes)
+            foreach (var settings in indexSettings)
             {
-                await indexProfileManager.ResetAsync(index);
-                await indexProfileManager.UpdateAsync(index);
-                await indexProfileManager.SynchronizeAsync(index);
+                await indexSettingsService.ResetAsync(settings);
+                await indexSettingsService.UpdateAsync(settings);
+                if (!await indexManager.ExistsAsync(settings.IndexName))
+                {
+                    await indexManager.CreateAsync(settings);
+                }
+
+                await indexSettingsService.SynchronizeAsync(settings);
             }
         });
     }

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Mime;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -125,12 +124,10 @@ public class BlobFileStore : IFileStore
 
     private async IAsyncEnumerable<IFileStoreEntry> GetDirectoryContentByHierarchyAsync(string path = null)
     {
-        path = this.NormalizePath(path);
-
         var prefix = this.Combine(_basePrefix, path);
         prefix = NormalizePrefix(prefix);
 
-        var page = _blobContainer.GetBlobsByHierarchyAsync(BlobTraits.Metadata, BlobStates.None, "/", prefix, CancellationToken.None);
+        var page = _blobContainer.GetBlobsByHierarchyAsync(BlobTraits.Metadata, BlobStates.None, "/", prefix);
 
         await foreach (var blob in page)
         {
@@ -161,15 +158,13 @@ public class BlobFileStore : IFileStore
 
     private async IAsyncEnumerable<IFileStoreEntry> GetDirectoryContentFlatAsync(string path = null)
     {
-        path = this.NormalizePath(path);
-
         // Folders are considered case sensitive in blob storage.
         var directories = new HashSet<string>();
 
         var prefix = this.Combine(_basePrefix, path);
         prefix = NormalizePrefix(prefix);
 
-        var page = _blobContainer.GetBlobsAsync(BlobTraits.Metadata, BlobStates.None, prefix, CancellationToken.None);
+        var page = _blobContainer.GetBlobsAsync(BlobTraits.Metadata, BlobStates.None, prefix);
         await foreach (var blob in page)
         {
             var name = WebUtility.UrlDecode(blob.Name);
@@ -266,7 +261,7 @@ public class BlobFileStore : IFileStore
             var prefix = this.Combine(_basePrefix, path);
             prefix = NormalizePrefix(prefix);
 
-            var page = _blobContainer.GetBlobsAsync(BlobTraits.Metadata, BlobStates.None, prefix, CancellationToken.None);
+            var page = _blobContainer.GetBlobsAsync(BlobTraits.Metadata, BlobStates.None, prefix);
             await foreach (var blob in page)
             {
                 var blobReference = _blobContainer.GetBlobClient(blob.Name);
@@ -394,7 +389,7 @@ public class BlobFileStore : IFileStore
 
             var headers = new BlobHttpHeaders
             {
-                ContentType = contentType ?? MediaTypeNames.Application.Octet,
+                ContentType = contentType ?? "application/octet-stream",
             };
 
             await blob.UploadAsync(inputStream, headers);
@@ -425,7 +420,7 @@ public class BlobFileStore : IFileStore
         prefix = NormalizePrefix(prefix);
 
         // Directory exists if path contains any files.
-        var page = _blobContainer.GetBlobsByHierarchyAsync(BlobTraits.Metadata, BlobStates.None, "/", prefix, CancellationToken.None);
+        var page = _blobContainer.GetBlobsByHierarchyAsync(BlobTraits.Metadata, BlobStates.None, "/", prefix);
 
         var enumerator = page.GetAsyncEnumerator();
 

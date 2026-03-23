@@ -50,6 +50,7 @@ public sealed class RegistrationController : Controller
 
     [HttpPost]
     [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     [ActionName(nameof(Register))]
     public async Task<IActionResult> RegisterPOST(string returnUrl = null)
     {

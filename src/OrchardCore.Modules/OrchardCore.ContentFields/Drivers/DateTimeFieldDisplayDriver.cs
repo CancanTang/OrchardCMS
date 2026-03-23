@@ -35,8 +35,8 @@ public sealed class DateTimeFieldDisplayDriver : ContentFieldDisplayDriver<DateT
             model.Part = context.ContentPart;
             model.PartFieldDefinition = context.PartFieldDefinition;
         })
-        .Location(OrchardCoreConstants.DisplayType.Detail, "Content")
-        .Location(OrchardCoreConstants.DisplayType.Summary, "Content");
+        .Location("Detail", "Content")
+        .Location("Summary", "Content");
     }
 
     public override IDisplayResult Edit(DateTimeField field, BuildFieldEditorContext context)

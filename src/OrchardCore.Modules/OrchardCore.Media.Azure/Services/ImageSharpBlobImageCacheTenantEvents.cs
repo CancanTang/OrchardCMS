@@ -38,20 +38,14 @@ internal sealed class ImageSharpBlobImageCacheTenantEvents : ModularTenantEvents
             return;
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Testing Azure Media ImageSharp Image Cache container {ContainerName} existence", _options.ContainerName);
-        }
+        _logger.LogDebug("Testing Azure Media ImageSharp Image Cache container {ContainerName} existence", _options.ContainerName);
 
         try
         {
             var blobContainer = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
             var response = await blobContainer.CreateIfNotExistsAsync(PublicAccessType.None);
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Azure Media ImageSharp Image Cache container {ContainerName} created.", _options.ContainerName);
-            }
+            _logger.LogDebug("Azure Media ImageSharp Image Cache container {ContainerName} created.", _options.ContainerName);
         }
         catch (RequestFailedException ex)
         {

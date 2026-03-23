@@ -53,46 +53,59 @@ public class ScriptTag
             }
         }
 
-        void PopulateDefinition(ResourceDefinition definition)
+        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
         {
-            definition.SetUrl(src, debugSrc);
+            // {% script src:"~/TheBlogTheme/js/clean-blog.min.js" %}
+            RequireSettings setting;
 
-            if (!string.IsNullOrEmpty(version))
+            if (string.IsNullOrEmpty(dependsOn))
             {
-                definition.SetVersion(version);
+                // Include custom script url
+                setting = resourceManager.RegisterUrl("script", src, debugSrc);
             }
-
-            if (!string.IsNullOrEmpty(cdnSrc))
+            else
             {
-                definition.SetCdn(cdnSrc, debugCdnSrc);
-            }
+                // Anonymous declaration with dependencies, then display
 
-            if (!string.IsNullOrEmpty(culture))
-            {
-                definition.SetCultures(culture.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
-            }
+                // Using the source as the name to prevent duplicate references to the same file
+                var s = src.ToLowerInvariant();
 
-            if (!string.IsNullOrEmpty(dependsOn))
-            {
+                var definition = resourceManager.InlineManifest.DefineScript(s);
+                definition.SetUrl(src, debugSrc);
+
+                if (!string.IsNullOrEmpty(version))
+                {
+                    definition.SetVersion(version);
+                }
+
+                if (!string.IsNullOrEmpty(cdnSrc))
+                {
+                    definition.SetCdn(cdnSrc, debugCdnSrc);
+                }
+
+                if (!string.IsNullOrEmpty(culture))
+                {
+                    definition.SetCultures(culture.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+                }
+
                 definition.SetDependencies(dependsOn.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+
+                if (appendVersion.HasValue)
+                {
+                    definition.ShouldAppendVersion(appendVersion);
+                }
+
+                if (!string.IsNullOrEmpty(version))
+                {
+                    definition.SetVersion(version);
+                }
+
+                setting = resourceManager.RegisterResource("script", s);
             }
 
-            if (appendVersion.HasValue)
-            {
-                definition.ShouldAppendVersion(appendVersion);
-            }
-        }
-
-        void PopulateSettings(RequireSettings setting, bool hasName)
-        {
             if (at != ResourceLocation.Unspecified)
             {
                 setting.AtLocation(at);
-            }
-
-            if (hasName && useCdn != null)
-            {
-                setting.UseCdn(useCdn.Value);
             }
 
             if (!string.IsNullOrEmpty(condition))
@@ -122,46 +135,56 @@ public class ScriptTag
                     setting.SetAttribute(attribute.Key, attribute.Value);
                 }
             }
-        }
-
-        void ProcessSourceScript()
-        {
-            // {% script src:"~/TheBlogTheme/js/clean-blog.min.js" %}
-            RequireSettings setting;
-
-            if (string.IsNullOrEmpty(dependsOn))
-            {
-                // Include custom script url.
-                setting = resourceManager.RegisterUrl("script", src, debugSrc);
-            }
-            else
-            {
-                // Anonymous declaration with dependencies, then display.
-
-                // Using the source as the name to prevent duplicate references to the same file.
-                var s = src.ToLowerInvariant();
-
-                PopulateDefinition(resourceManager.InlineManifest.DefineScript(s));
-
-                setting = resourceManager.RegisterResource("script", s);
-            }
-
-            PopulateSettings(setting, hasName: false);
 
             if (at == ResourceLocation.Unspecified || at == ResourceLocation.Inline)
             {
                 resourceManager.RenderLocalScript(setting, writer);
             }
         }
-
-        void ProcessNamedScript()
+        else if (!string.IsNullOrEmpty(name) && string.IsNullOrEmpty(src))
         {
-            // Resource required.
+            // Resource required
             // {% script name:"bootstrap" %}
 
             var setting = resourceManager.RegisterResource("script", name);
 
-            PopulateSettings(setting, hasName: true);
+            if (customAttributes != null)
+            {
+                foreach (var attribute in customAttributes)
+                {
+                    setting.SetAttribute(attribute.Key, attribute.Value);
+                }
+            }
+
+            if (at != ResourceLocation.Unspecified)
+            {
+                setting.AtLocation(at);
+            }
+
+            if (useCdn != null)
+            {
+                setting.UseCdn(useCdn.Value);
+            }
+
+            if (!string.IsNullOrEmpty(condition))
+            {
+                setting.UseCondition(condition);
+            }
+
+            if (debug != null)
+            {
+                setting.UseDebugMode(debug.Value);
+            }
+
+            if (!string.IsNullOrEmpty(culture))
+            {
+                setting.UseCulture(culture);
+            }
+
+            if (appendVersion.HasValue)
+            {
+                setting.ShouldAppendVersion(appendVersion);
+            }
 
             if (!string.IsNullOrEmpty(version))
             {
@@ -179,38 +202,84 @@ public class ScriptTag
                 resourceManager.RenderLocalScript(setting, writer);
             }
         }
-
-        void ProcessInlineDeclaration()
+        else if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
         {
-            // Inline declaration.
+            // Inline declaration
 
-            PopulateDefinition(resourceManager.InlineManifest.DefineScript(name));
+            var definition = resourceManager.InlineManifest.DefineScript(name);
+            definition.SetUrl(src, debugSrc);
 
-            // If At is specified then we also render it.
+            if (!string.IsNullOrEmpty(version))
+            {
+                definition.SetVersion(version);
+            }
+
+            if (!string.IsNullOrEmpty(cdnSrc))
+            {
+                definition.SetCdn(cdnSrc, debugCdnSrc);
+            }
+
+            if (!string.IsNullOrEmpty(culture))
+            {
+                definition.SetCultures(culture.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            if (!string.IsNullOrEmpty(dependsOn))
+            {
+                definition.SetDependencies(dependsOn.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            if (appendVersion.HasValue)
+            {
+                definition.ShouldAppendVersion(appendVersion);
+            }
+
+            if (!string.IsNullOrEmpty(version))
+            {
+                definition.SetVersion(version);
+            }
+
+            // If At is specified then we also render it
             if (at != ResourceLocation.Unspecified)
             {
                 var setting = resourceManager.RegisterResource("script", name);
 
-                PopulateSettings(setting, hasName: true);
+                setting.AtLocation(at);
+
+                if (useCdn != null)
+                {
+                    setting.UseCdn(useCdn.Value);
+                }
+
+                if (!string.IsNullOrEmpty(condition))
+                {
+                    setting.UseCondition(condition);
+                }
+
+                if (debug != null)
+                {
+                    setting.UseDebugMode(debug.Value);
+                }
+
+                if (!string.IsNullOrEmpty(culture))
+                {
+                    setting.UseCulture(culture);
+                }
+
+                if (customAttributes != null)
+                {
+                    foreach (var attribute in customAttributes)
+                    {
+                        setting.SetAttribute(attribute.Key, attribute.Value);
+                    }
+                }
 
                 if (at == ResourceLocation.Inline)
                 {
                     resourceManager.RenderLocalScript(setting, writer);
                 }
-            }
-        }
 
-        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
-        {
-            ProcessSourceScript();
-        }
-        else if (!string.IsNullOrEmpty(name) && string.IsNullOrEmpty(src))
-        {
-            ProcessNamedScript();
-        }
-        else if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
-        {
-            ProcessInlineDeclaration();
+            }
         }
 
         return Completion.Normal;

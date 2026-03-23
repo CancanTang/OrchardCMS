@@ -3,18 +3,10 @@ using OrchardCore.DisplayManagement.Theming;
 
 namespace OrchardCore.DisplayManagement.Descriptors;
 
-/// <summary>
-/// Provides placement resolvers for the current display scope.
-/// </summary>
-/// <remarks>
-/// This implementation is scoped per request and intentionally not thread-safe.
-/// It relies on Orchard Core's sequential placement binding flow and must not be registered as a singleton.
-/// </remarks>
 public class ShapeTablePlacementProvider : IShapePlacementProvider
 {
     private readonly IShapeTableManager _shapeTableManager;
     private readonly IThemeManager _themeManager;
-    private readonly Dictionary<ShapeTable, Task<IPlacementInfoResolver>> _resolvers = new();
 
     public ShapeTablePlacementProvider(
         IShapeTableManager shapeTableManager,
@@ -25,46 +17,19 @@ public class ShapeTablePlacementProvider : IShapePlacementProvider
         _themeManager = themeManager;
     }
 
-    public Task<IPlacementInfoResolver> BuildPlacementInfoResolverAsync(IBuildShapeContext context)
+    public async Task<IPlacementInfoResolver> BuildPlacementInfoResolverAsync(IBuildShapeContext context)
     {
-        var shapeTableTask = _themeManager.TryGetShapeTableAsync(_shapeTableManager);
+        var theme = await _themeManager.GetThemeAsync();
 
-        if (shapeTableTask.IsCompletedSuccessfully)
+        // If there is no active theme, do nothing
+        if (theme == null)
         {
-            var shapeTable = shapeTableTask.Result;
-
-            // If there is no active theme, do nothing
-            if (shapeTable == null)
-            {
-                return Task.FromResult<IPlacementInfoResolver>(null);
-            }
-
-            if (_resolvers.TryGetValue(shapeTable, out var resolver))
-            {
-                return resolver;
-            }
-
-            resolver = Task.FromResult<IPlacementInfoResolver>(new ShapeTablePlacementResolver(shapeTable));
-            _resolvers[shapeTable] = resolver;
-            return resolver;
+            return null;
         }
 
-        return BuildPlacementInfoResolverAwaitedAsync(shapeTableTask, _resolvers);
+        var shapeTable = await _shapeTableManager.GetShapeTableAsync(theme.Id);
 
-        static async Task<IPlacementInfoResolver> BuildPlacementInfoResolverAwaitedAsync(Task<ShapeTable> shapeTableTask, Dictionary<ShapeTable, Task<IPlacementInfoResolver>> resolvers)
-        {
-            var shapeTable = await shapeTableTask;
-
-            // If there is no active theme, do nothing
-            if (shapeTable == null)
-            {
-                return null;
-            }
-
-            var resolver = new ShapeTablePlacementResolver(shapeTable);
-            resolvers[shapeTable] = Task.FromResult<IPlacementInfoResolver>(resolver);
-            return resolver;
-        }
+        return new ShapeTablePlacementResolver(shapeTable);
     }
 
     private sealed class ShapeTablePlacementResolver : IPlacementInfoResolver
@@ -81,13 +46,11 @@ public class ShapeTablePlacementProvider : IShapePlacementProvider
             if (_shapeTable.Descriptors.TryGetValue(placementContext.ShapeType, out var descriptor))
             {
                 var placement = descriptor.Placement(placementContext);
-
-                if (placement != null && !string.IsNullOrEmpty(placementContext.Source))
+                if (placement != null)
                 {
-                    return placement.WithSource(placementContext.Source);
+                    placement.Source = placementContext.Source;
+                    return placement;
                 }
-
-                return placement;
             }
 
             return null;

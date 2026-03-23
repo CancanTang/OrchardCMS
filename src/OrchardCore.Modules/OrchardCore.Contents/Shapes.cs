@@ -4,6 +4,7 @@ using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.Utilities;
 
 namespace OrchardCore.Contents;
 
@@ -19,15 +20,26 @@ public class Shapes : ShapeTableProvider
 
                 if (contentItem != null)
                 {
-                    var displayType = displaying.Shape.Metadata.DisplayType;
+                    // Alternates in order of specificity.
+                    // Display type > content type > specific content > display type for a content type > display type for specific content
+                    // BasicShapeTemplateHarvester.Adjust will then adjust the template name
 
-                    // Use cached alternates for content shapes and add them efficiently
-                    var alternates = ContentShapeAlternatesFactory.GetAlternates(
-                        contentItem.ContentType,
-                        contentItem.Id.ToString(),
-                        displayType);
+                    // Content__[DisplayType] e.g. Content-Summary
+                    displaying.Shape.Metadata.Alternates.Add("Content_" + displaying.Shape.Metadata.DisplayType.EncodeAlternateElement());
 
-                    displaying.Shape.Metadata.Alternates.AddRange(alternates);
+                    var encodedContentType = contentItem.ContentType.EncodeAlternateElement();
+
+                    // Content__[ContentType] e.g. Content-BlogPost,
+                    displaying.Shape.Metadata.Alternates.Add("Content__" + encodedContentType);
+
+                    // Content__[Id] e.g. Content-42,
+                    displaying.Shape.Metadata.Alternates.Add("Content__" + contentItem.Id);
+
+                    // Content_[DisplayType]__[ContentType] e.g. Content-BlogPost.Summary
+                    displaying.Shape.Metadata.Alternates.Add("Content_" + displaying.Shape.Metadata.DisplayType + "__" + encodedContentType);
+
+                    // Content_[DisplayType]__[Id] e.g. Content-42.Summary
+                    displaying.Shape.Metadata.Alternates.Add("Content_" + displaying.Shape.Metadata.DisplayType + "__" + contentItem.Id);
                 }
             });
 

@@ -4,7 +4,6 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Lists.Models;
-using OrchardCore.Localization.Data;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Navigation;
 
@@ -13,18 +12,15 @@ namespace OrchardCore.Lists.AdminNodes;
 public sealed class ListsAdminNodeDriver : DisplayDriver<MenuItem, ListsAdminNode>
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IDataLocalizer D;
 
     internal readonly IStringLocalizer S;
 
     public ListsAdminNodeDriver(
         IContentDefinitionManager contentDefinitionManager,
-        IStringLocalizer<ListsAdminNodeDriver> stringLocalizer,
-        IDataLocalizer dataLocalizer)
+        IStringLocalizer<ListsAdminNodeDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         S = stringLocalizer;
-        D = dataLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(ListsAdminNode treeNode, BuildDisplayContext context)
@@ -35,14 +31,12 @@ public sealed class ListsAdminNodeDriver : DisplayDriver<MenuItem, ListsAdminNod
         );
     }
 
-    public async override Task<IDisplayResult> EditAsync(ListsAdminNode treeNode, BuildEditorContext context)
+    public override IDisplayResult Edit(ListsAdminNode treeNode, BuildEditorContext context)
     {
-        var contentTypes = await GetContentTypesSelectListAsync();
-
-        return Initialize<ListsAdminNodeViewModel>("ListsAdminNode_Fields_TreeEdit", model =>
+        return Initialize<ListsAdminNodeViewModel>("ListsAdminNode_Fields_TreeEdit", async model =>
         {
             model.ContentType = treeNode.ContentType;
-            model.ContentTypes = contentTypes;
+            model.ContentTypes = await GetContentTypesSelectListAsync();
             model.IconForContentItems = treeNode.IconForContentItems;
             model.AddContentTypeAsParent = treeNode.AddContentTypeAsParent;
             model.IconForParentLink = treeNode.IconForParentLink;
@@ -72,17 +66,15 @@ public sealed class ListsAdminNodeDriver : DisplayDriver<MenuItem, ListsAdminNod
         treeNode.AddContentTypeAsParent = model.AddContentTypeAsParent;
         treeNode.IconForParentLink = model.IconForParentLink;
 
-        return await EditAsync(treeNode, context);
+        return Edit(treeNode, context);
     }
 
     private async Task<List<SelectListItem>> GetContentTypesSelectListAsync()
     {
-        var contentTypeDefinitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-
-        return contentTypeDefinitions
+        return (await _contentDefinitionManager.ListTypeDefinitionsAsync())
             .Where(ctd => ctd.Parts.Any(p => p.PartDefinition.Name.Equals(nameof(ListPart), StringComparison.OrdinalIgnoreCase)))
             .OrderBy(ctd => ctd.DisplayName)
-            .Select(ctd => new SelectListItem(D[ctd.DisplayName, "Content Types"], ctd.Name))
+            .Select(ctd => new SelectListItem(ctd.DisplayName, ctd.Name))
             .ToList();
     }
 

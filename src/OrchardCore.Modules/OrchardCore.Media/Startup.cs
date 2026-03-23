@@ -115,11 +115,10 @@ public sealed class Startup : StartupBase
             var mediaOptions = serviceProvider.GetRequiredService<IOptions<MediaOptions>>().Value;
             var mediaEventHandlers = serviceProvider.GetServices<IMediaEventHandler>();
             var mediaCreatingEventHandlers = serviceProvider.GetServices<IMediaCreatingEventHandler>();
-            var fileSystemStoreLogger = serviceProvider.GetRequiredService<ILogger<FileSystemStore>>();
-            var defaultMediaFileStoreLogger = serviceProvider.GetRequiredService<ILogger<DefaultMediaFileStore>>();
+            var logger = serviceProvider.GetRequiredService<ILogger<DefaultMediaFileStore>>();
 
             var mediaPath = GetMediaPath(shellOptions.Value, shellSettings, mediaOptions.AssetsPath);
-            var fileStore = new FileSystemStore(mediaPath, fileSystemStoreLogger);
+            var fileStore = new FileSystemStore(mediaPath);
 
             var mediaUrlBase = "/" + fileStore.Combine(shellSettings.RequestUrlPrefix, mediaOptions.AssetsRequestPath);
 
@@ -132,7 +131,7 @@ public sealed class Startup : StartupBase
                 mediaUrlBase = fileStore.Combine(originalPathBase.Value, mediaUrlBase);
             }
 
-            return new DefaultMediaFileStore(fileStore, mediaUrlBase, mediaOptions.CdnBaseUrl, mediaEventHandlers, mediaCreatingEventHandlers, defaultMediaFileStoreLogger);
+            return new DefaultMediaFileStore(fileStore, mediaUrlBase, mediaOptions.CdnBaseUrl, mediaEventHandlers, mediaCreatingEventHandlers, logger);
         });
 
         services.AddPermissionProvider<PermissionProvider>();
@@ -166,8 +165,7 @@ public sealed class Startup : StartupBase
 
         // Media Field
         services.AddContentField<MediaField>()
-            .UseDisplayDriver<MediaFieldDisplayDriver>()
-            .AddHandler<AttachedMediaFieldHandler>();
+            .UseDisplayDriver<MediaFieldDisplayDriver>();
         services.AddScoped<IContentPartFieldDefinitionDisplayDriver, MediaFieldSettingsDriver>();
         services.AddScoped<AttachedMediaFieldFileService, AttachedMediaFieldFileService>();
         services.AddScoped<IContentHandler, AttachedMediaFieldContentHandler>();

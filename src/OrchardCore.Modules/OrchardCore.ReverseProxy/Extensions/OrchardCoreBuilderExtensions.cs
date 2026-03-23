@@ -12,12 +12,7 @@ public static class OrchardCoreBuilderExtensions
         {
             var configurationSection = serviceProvider.GetRequiredService<IShellConfiguration>().GetSection("OrchardCore_ReverseProxy");
 
-            tenantServices.PostConfigure<ReverseProxySettings>(settings =>
-            {
-                configurationSection.Bind(settings);
-
-                settings.FromConfiguration = true;
-            });
+            tenantServices.PostConfigure<ReverseProxySettings>(settings => configurationSection.Bind(settings));
         });
 
         return builder;

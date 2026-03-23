@@ -22,9 +22,9 @@ public sealed class FluidOptionsParser<TOptions> where TOptions : class
 
         // Use Fluid directly as this is transient and cannot invoke _liquidTemplateManager.
         var parsedTemplate = _fluidParser.Parse(template);
-
         return parsedTemplate.Render(templateContext, NullEncoder.Default)
-            .ReplaceLineEndings(string.Empty)
+            .Replace("\r", string.Empty)
+            .Replace("\n", string.Empty)
             .Trim();
     }
 

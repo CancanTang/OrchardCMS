@@ -4,6 +4,7 @@ public class Asset
 {
     public Asset(string asset)
     {
+        asset = asset.Replace('\\', '/');
         var index = asset.IndexOf('|');
 
         if (index == -1)
@@ -13,8 +14,6 @@ public class Asset
         }
         else
         {
-            asset = asset.Replace('\\', '/');
-
             ModuleAssetPath = asset[..index];
             ProjectAssetPath = asset[(index + 1)..];
         }

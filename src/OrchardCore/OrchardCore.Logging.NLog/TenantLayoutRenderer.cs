@@ -15,14 +15,13 @@ public class TenantLayoutRenderer : AspNetLayoutRendererBase
 {
     public const string LayoutRendererName = "orchard-tenant-name";
 
-    protected override void Append(StringBuilder builder, LogEventInfo logEvent)
+    protected override void DoAppend(StringBuilder builder, LogEventInfo logEvent)
     {
+        var tenantName = ShellScope.Context?.Settings.Name;
+
         // If there is no ShellContext in the Features then the log is rendered from the Host.
-        var tenantName = HttpContextAccessor?.HttpContext?.Features.Get<ShellContextFeature>()
-            ?.ShellContext.Settings.Name;
+        tenantName ??= HttpContextAccessor.HttpContext.Features.Get<ShellContextFeature>()?.ShellContext.Settings.Name ?? "None";
 
-        tenantName ??= ShellScope.Context?.Settings.Name;
-
-        builder.Append(tenantName ?? "None");
+        builder.Append(tenantName);
     }
 }

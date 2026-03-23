@@ -17,9 +17,9 @@ public class AliasPartContentHandleProvider : IContentHandleProvider
 
     public async Task<string> GetContentItemIdAsync(string handle)
     {
-        if (handle.StartsWith(AliasConstants.AliasPrefix, StringComparison.OrdinalIgnoreCase))
+        if (handle.StartsWith("alias:", StringComparison.OrdinalIgnoreCase))
         {
-            handle = handle[AliasConstants.AliasPrefix.Length..];
+            handle = handle[6..];
 
             var aliasPartIndex = await AliasPartContentHandleHelper.QueryAliasIndex(_session, handle);
             return aliasPartIndex?.ContentItemId;

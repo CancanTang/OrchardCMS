@@ -45,7 +45,7 @@ var corsApp = new Vue({
             this.selectedPolicy = {
                 name: 'New policy',
                 allowedOrigins: [],
-                allowAnyOrigin: false,
+                allowAnyOrigin: true,
                 allowedMethods: [],
                 allowAnyMethod: true,
                 allowedHeaders: [],
@@ -112,7 +112,7 @@ var corsApp = new Vue({
                 var elementsToFilter = $("[data-filter-value]");
 
                 // On ESC, clear the search box and display all
-                if (e.key === 'Escape' || search == '') {
+                if (e.keyCode == 27 || search == '') {
                     searchBox.val('');
                     elementsToFilter.toggle(true);
                     $('#list-alert').addClass("d-none");

@@ -72,10 +72,7 @@ internal sealed class DistributedShellHostedService : BackgroundService
 
         stoppingToken.Register(() =>
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("'{ServiceName}' is stopping.", nameof(DistributedShellHostedService));
-            }
+            _logger.LogInformation("'{ServiceName}' is stopping.", nameof(DistributedShellHostedService));
         });
 
         // Init the idle time.

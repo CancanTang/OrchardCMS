@@ -30,7 +30,7 @@ public sealed class DefaultContentTypeDisplayDriver : ContentTypeDefinitionDispl
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        context.Builder.WithDisplayName(model.DisplayName);
+        context.Builder.DisplayedAs(model.DisplayName);
 
         if (string.IsNullOrWhiteSpace(model.DisplayName))
         {

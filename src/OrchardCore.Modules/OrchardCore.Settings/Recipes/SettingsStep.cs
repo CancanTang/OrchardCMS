@@ -2,8 +2,6 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
-using OrchardCore.Settings;
-using Json.Path;
 
 namespace OrchardCore.Settings.Recipes;
 
@@ -23,21 +21,10 @@ public sealed class SettingsStep : NamedRecipeStepHandler
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
         var model = context.Step;
-        if (model == null)
-        {
-            return;
-        }
-
         var site = await _siteService.LoadSiteSettingsAsync();
-        site ??= new SiteSettings();
 
         foreach (var property in model)
         {
-            if (property.Value is null)
-            {
-                continue;
-            }
-
             switch (property.Key)
             {
                 case "BaseUrl":
@@ -61,10 +48,7 @@ public sealed class SettingsStep : NamedRecipeStepHandler
                     break;
 
                 case "ResourceDebugMode":
-                    if (property.Value.TryGetEnumValue<ResourceDebugMode>(out var resourceDebugMode))
-                    {
-                        site.ResourceDebugMode = resourceDebugMode.Value;
-                    }
+                    site.ResourceDebugMode = (ResourceDebugMode)property.Value.Value<int>();
                     break;
 
                 case "SiteName":
@@ -104,10 +88,7 @@ public sealed class SettingsStep : NamedRecipeStepHandler
                     break;
 
                 case "CacheMode":
-                    if (property.Value.TryGetEnumValue<CacheMode>(out var cacheMode))
-                    {
-                        site.CacheMode = cacheMode.Value;
-                    }
+                    site.CacheMode = (CacheMode)property.Value.Value<int>();
                     break;
 
                 default:

@@ -1,19 +1,15 @@
 using OrchardCore.Apis.GraphQL.Client;
-using OrchardCore.BackgroundJobs;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Search.Lucene;
 
 namespace OrchardCore.Tests.Apis.Context;
 
 public class SiteContext : IDisposable
 {
-    private const int DeferredTasksTimeoutSeconds = 60;
-    private const int HttpBackgroundJobsTimeoutSeconds = 90;
-    private const int WaitDelayMilliseconds = 10;
-
     private static readonly TablePrefixGenerator _tablePrefixGenerator = new();
     public static OrchardTestFixture<SiteStartup> Site { get; }
     public static IShellHost ShellHost { get; private set; }
@@ -101,56 +97,11 @@ public class SiteContext : IDisposable
         var shellScope = await ShellHost.GetScopeAsync(TenantName);
         HttpContextAccessor.HttpContext = shellScope.ShellContext.CreateHttpContext();
         await shellScope.UsingAsync(execute, activateShell);
-
-        HttpContextAccessor.HttpContext = null;
     }
 
-    // Waits up to 60 seconds for all outstanding deferred tasks to complete by making sure no shell scope is
-    // currently executing.
-    public Task WaitForDeferredTasksAsync(CancellationToken cancellationToken)
+    public async Task RunRecipeAsync(string recipeName, string recipePath)
     {
-        return UsingTenantScopeAsync(async scope =>
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(DeferredTasksTimeoutSeconds));
-
-            // If there is only one active scope (the current one), it means that all deferred tasks have completed.
-            while (!cts.Token.IsCancellationRequested &&
-                    scope.ShellContext.ActiveScopes > 1)
-            {
-                await Task.Delay(WaitDelayMilliseconds, cancellationToken);
-            }
-
-            if (cts.IsCancellationRequested)
-            {
-                throw new TimeoutException("Not all deferred tasks have completed within the expected time frame.");
-            }
-        });
-    }
-
-    // Waits up to 90 seconds for all outstanding HTTP background jobs.
-    // This also handles nested jobs where completing one job may spawn another.
-    public Task WaitForHttpBackgroundJobsAsync(CancellationToken cancellationToken)
-    {
-        return UsingTenantScopeAsync(async scope =>
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(HttpBackgroundJobsTimeoutSeconds));
-
-            while (!cts.Token.IsCancellationRequested &&
-                    HttpBackgroundJob.ActiveJobsCount > 0)
-            {
-                await Task.Delay(WaitDelayMilliseconds, cancellationToken);
-            }
-
-            if (cts.IsCancellationRequested)
-            {
-                throw new TimeoutException("Not all HTTP background jobs have completed within the expected time frame.");
-            }
-        });
-    }
-
-    public Task RunRecipeAsync(string recipeName, string recipePath)
-    {
-        return UsingTenantScopeAsync(async scope =>
+        await UsingTenantScopeAsync(async scope =>
         {
             var shellFeaturesManager = scope.ServiceProvider.GetRequiredService<IShellFeaturesManager>();
             var recipeHarvesters = scope.ServiceProvider.GetRequiredService<IEnumerable<IRecipeHarvester>>();
@@ -170,6 +121,20 @@ public class SiteContext : IDisposable
                 recipe,
                 new Dictionary<string, object>(),
                 CancellationToken.None);
+        });
+    }
+
+    public async Task ResetLuceneIndiciesAsync(string indexName)
+    {
+        await UsingTenantScopeAsync(async scope =>
+        {
+            var luceneIndexSettingsService = scope.ServiceProvider.GetRequiredService<LuceneIndexSettingsService>();
+            var luceneIndexingService = scope.ServiceProvider.GetRequiredService<LuceneIndexingService>();
+
+            var luceneIndexSettings = await luceneIndexSettingsService.GetSettingsAsync(indexName);
+
+            luceneIndexingService.ResetIndexAsync(indexName);
+            await luceneIndexingService.ProcessContentItemsAsync(indexName);
         });
     }
 

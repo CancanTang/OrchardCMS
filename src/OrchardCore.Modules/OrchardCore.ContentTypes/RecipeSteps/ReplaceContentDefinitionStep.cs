@@ -47,7 +47,7 @@ public sealed class ReplaceContentDefinitionStep : NamedRecipeStepHandler
         {
             if (!string.IsNullOrEmpty(record.DisplayName))
             {
-                builder.WithDisplayName(record.DisplayName);
+                builder.DisplayedAs(record.DisplayName);
                 builder.MergeSettings(record.Settings);
             }
 

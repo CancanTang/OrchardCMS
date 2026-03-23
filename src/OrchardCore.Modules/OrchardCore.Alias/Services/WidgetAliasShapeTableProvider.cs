@@ -20,14 +20,13 @@ public sealed class WidgetAliasShapeTableProvider : ShapeTableProvider
 
                 if (aliasPart != null)
                 {
-                    var displayType = displaying.Shape.Metadata.DisplayType;
+                    var encodedAlias = aliasPart.Alias.EncodeAlternateElement();
 
-                    // Get cached alternates and add them efficiently
-                    var cachedAlternates = WidgetAliasAlternatesFactory.GetAlternates(
-                        aliasPart.Alias,
-                        displayType);
+                    // Widget__Alias__[Alias] e.g. Widget-Alias-example, Widget-Alias-my-page
+                    displaying.Shape.Metadata.Alternates.Add("Widget__Alias__" + encodedAlias);
 
-                    displaying.Shape.Metadata.Alternates.AddRange(cachedAlternates);
+                    // Widget_[DisplayType]__Alias__[Alias] e.g. Widget-Alias-example.Summary, Widget-Alias-my-page.Summary
+                    displaying.Shape.Metadata.Alternates.Add("Widget_" + displaying.Shape.Metadata.DisplayType + "__Alias__" + encodedAlias);
                 }
             });
 

@@ -7,7 +7,6 @@ public class UserPickerFieldSettingsViewModel
     public bool Multiple { get; set; }
     public bool DisplayAllUsers { get; set; }
     public RoleEntry[] Roles { get; set; } = [];
-    public string Placeholder { get; set; } = string.Empty;
 }
 
 public class RoleEntry

@@ -325,7 +325,8 @@ public class ViewMediaFolderAuthorizationHandlerTests
         var attachedMediaFieldFileService = new AttachedMediaFieldFileService(
             mockMediaFileStore.Object,
             httpContextAccessor,
-            mockUserAssetFolderNameProvider.Object);
+            mockUserAssetFolderNameProvider.Object,
+            NullLogger<AttachedMediaFieldFileService>.Instance);
 
         // Create an IAuthorizationService mock that mimics how OC is granting permissions. 
         var mockAuthorizationService = new Mock<IAuthorizationService>();

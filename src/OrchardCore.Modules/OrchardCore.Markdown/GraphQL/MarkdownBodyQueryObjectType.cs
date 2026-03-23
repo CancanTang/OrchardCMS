@@ -44,29 +44,29 @@ public class MarkdownBodyQueryObjectType : ObjectGraphType<MarkdownBodyPart>
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
 
         var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(ctx.Source.ContentItem.ContentType);
-        var contentTypePartDefinition = contentTypeDefinition.Parts
-            .FirstOrDefault(x => string.Equals(x.PartDefinition.Name, "MarkdownBodyPart", StringComparison.Ordinal));
+        var contentTypePartDefinition = contentTypeDefinition.Parts.FirstOrDefault(x => string.Equals(x.PartDefinition.Name, "MarkdownBodyPart", StringComparison.Ordinal));
         var settings = contentTypePartDefinition.GetSettings<MarkdownBodyPartSettings>();
 
-        var markdown = ctx.Source.Markdown ?? string.Empty;
-        if (settings.RenderLiquid)
+        // The default Markdown option is to entity escape html
+        // so filters must be run after the markdown has been processed.
+        var html = markdownService.ToHtml(ctx.Source.Markdown);
+
+        // The liquid rendering is for backwards compatibility and can be removed in a future version.
+        if (!settings.SanitizeHtml)
         {
             var liquidTemplateManager = serviceProvider.GetService<ILiquidTemplateManager>();
             var htmlEncoder = serviceProvider.GetService<HtmlEncoder>();
             var model = new MarkdownBodyPartViewModel()
             {
-                Markdown = markdown,
+                Markdown = ctx.Source.Markdown,
+                Html = html,
                 MarkdownBodyPart = ctx.Source,
                 ContentItem = ctx.Source.ContentItem,
             };
 
-            markdown = await liquidTemplateManager.RenderStringAsync(model.Markdown, htmlEncoder, model,
+            html = await liquidTemplateManager.RenderStringAsync(html, htmlEncoder, model,
                 new Dictionary<string, FluidValue>() { ["ContentItem"] = new ObjectValue(model.ContentItem) });
         }
-
-        // The default Markdown option is to entity escape html so filters must be run after the markdown has been
-        // processed.
-        var html = markdownService.ToHtml(markdown ?? string.Empty);
 
         html = await shortcodeService.ProcessAsync(html,
             new Context

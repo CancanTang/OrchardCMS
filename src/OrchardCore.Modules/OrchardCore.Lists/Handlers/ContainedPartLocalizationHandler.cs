@@ -27,8 +27,7 @@ public class ContainedPartLocalizationHandler : ContentLocalizationPartHandlerBa
         if (containedPart != null)
         {
             var list = await _session.QueryIndex<LocalizedContentItemIndex>(i => (i.Published || i.Latest) && i.ContentItemId == containedPart.ListContentItemId).FirstOrDefaultAsync();
-            var normalizedCulture = context.Culture.ToLowerInvariant();
-            var localizedList = await _session.QueryIndex<LocalizedContentItemIndex>(i => (i.Published || i.Latest) && i.LocalizationSet == list.LocalizationSet && i.Culture == normalizedCulture).FirstOrDefaultAsync();
+            var localizedList = await _session.QueryIndex<LocalizedContentItemIndex>(i => (i.Published || i.Latest) && i.LocalizationSet == list.LocalizationSet && i.Culture == context.Culture).FirstOrDefaultAsync();
 
             if (localizedList != null)
             {
@@ -57,8 +56,7 @@ public class LocalizationContainedPartHandler : ContentPartHandler<LocalizationP
         if (containedPart != null)
         {
             var list = await _session.QueryIndex<LocalizedContentItemIndex>(i => (i.Published || i.Latest) && i.ContentItemId == containedPart.ListContentItemId).FirstOrDefaultAsync();
-            var normalizedCulture = instance.Culture.ToLowerInvariant();
-            var localizedList = await _session.QueryIndex<LocalizedContentItemIndex>(i => (i.Published || i.Latest) && i.LocalizationSet == list.LocalizationSet && i.Culture == normalizedCulture).FirstOrDefaultAsync();
+            var localizedList = await _session.QueryIndex<LocalizedContentItemIndex>(i => (i.Published || i.Latest) && i.LocalizationSet == list.LocalizationSet && i.Culture == instance.Culture).FirstOrDefaultAsync();
 
             if (localizedList != null)
             {

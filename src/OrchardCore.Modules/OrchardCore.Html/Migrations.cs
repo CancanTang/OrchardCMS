@@ -34,7 +34,7 @@ public sealed class Migrations : DataMigration
             .WithDescription("Provides an HTML Body for your content item."));
 
         // Shortcut other migration steps on new content definition schemas.
-        return 6;
+        return 5;
     }
 
     // This code can be removed in a later version.
@@ -85,10 +85,7 @@ public sealed class Migrations : DataMigration
                 if (UpdateBody((JsonObject)contentItemVersion.Content))
                 {
                     await _session.SaveAsync(contentItemVersion);
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation("A content item version's BodyPart was upgraded: {ContentItemVersionId}", contentItemVersion.ContentItemVersionId);
-                    }
+                    _logger.LogInformation("A content item version's BodyPart was upgraded: {ContentItemVersionId}", contentItemVersion.ContentItemVersionId);
                 }
 
                 lastDocumentId = contentItemVersion.Id;
@@ -128,27 +125,24 @@ public sealed class Migrations : DataMigration
             return changed;
         }
 
-        return 5; // Returning 5 instead of 4, because UpdateFrom5 is no longer needed, see below why.
+        return 4;
     }
 
-    // Previously, Liquid rendering was enabled by not having Html sanitization enabled and UpdateFrom5Async disabled
-    // sanitization to ensure that HtmlBodyParts kept Liquid rendering enabled. Since Liquid rendering is now controlled
-    // by a separate setting, disabling sanitization is no longer necessary.
-
-    public async Task<int> UpdateFrom5Async()
+    // This code can be removed in a later version.
+    public async Task<int> UpdateFrom4Async()
     {
-        // To keep the same behavior as before, RenderLiquid is initialized to the opposite of SanitizeHtml.
+        // For backwards compatibility with liquid filters we disable html sanitization on existing field definitions.
         foreach (var contentType in await _contentDefinitionManager.LoadTypeDefinitionsAsync())
         {
-            if (contentType.Parts.Any(p => p.PartDefinition.Name == "HtmlBodyPart"))
+            if (contentType.Parts.Any(x => x.PartDefinition.Name == "HtmlBodyPart"))
             {
-                await _contentDefinitionManager.AlterTypeDefinitionAsync(contentType.Name, t => t.WithPart("HtmlBodyPart", part =>
+                await _contentDefinitionManager.AlterTypeDefinitionAsync(contentType.Name, x => x.WithPart("HtmlBodyPart", part =>
                 {
-                    part.MergeSettings<HtmlBodyPartSettings>(s => s.RenderLiquid = !s.SanitizeHtml);
+                    part.MergeSettings<HtmlBodyPartSettings>(x => x.SanitizeHtml = false);
                 }));
             }
         }
 
-        return 6;
+        return 5;
     }
 }

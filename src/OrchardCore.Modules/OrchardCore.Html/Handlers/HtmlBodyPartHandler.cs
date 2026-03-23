@@ -43,7 +43,7 @@ public class HtmlBodyPartHandler : ContentPartHandler<HtmlBodyPart>
 
                 var html = part.Html;
 
-                if (settings.RenderLiquid)
+                if (!settings.SanitizeHtml)
                 {
                     var model = new HtmlBodyPartViewModel()
                     {

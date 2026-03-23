@@ -16,8 +16,8 @@ public sealed class DefaultAzureAISearchFieldIndexEvents : IAzureAISearchFieldIn
         }
         else
         {
-            context.Map.IsFilterable = context.IsRootField;
-            context.Map.IsSortable = context.IsRootField;
+            context.Map.IsFilterable = true;
+            context.Map.IsSortable = true;
         }
 
         return Task.CompletedTask;
@@ -29,24 +29,24 @@ public sealed class DefaultAzureAISearchFieldIndexEvents : IAzureAISearchFieldIn
         {
             context.Map.IsSearchable = true;
             context.Map.IsCollection = false;
-            context.Map.IsSuggester = context.IsRootField;
+            context.Map.IsSuggester = true;
         }
         else if (context.Map.AzureFieldKey == AzureAISearchIndexManager.DisplayTextAnalyzedKey)
         {
             context.Map.IsSearchable = true;
             context.Map.IsCollection = false;
         }
-        else if (context.Map.AzureFieldKey == ContentIndexingConstants.ContentItemIdKey)
+        else if (context.Map.AzureFieldKey == IndexingConstants.ContentItemIdKey)
         {
-            context.Map.IsKey = context.IsRootField; // Only the root field should be marked as a key.
-            context.Map.IsFilterable = context.IsRootField;
-            context.Map.IsSortable = context.IsRootField;
+            context.Map.IsKey = true;
+            context.Map.IsFilterable = true;
+            context.Map.IsSortable = true;
         }
-        else if (context.Map.AzureFieldKey == ContentIndexingConstants.ContentItemVersionIdKey ||
-            context.Map.AzureFieldKey == ContentIndexingConstants.OwnerKey)
+        else if (context.Map.AzureFieldKey == IndexingConstants.ContentItemVersionIdKey ||
+            context.Map.AzureFieldKey == IndexingConstants.OwnerKey)
         {
-            context.Map.IsFilterable = context.IsRootField;
-            context.Map.IsSortable = context.IsRootField;
+            context.Map.IsFilterable = true;
+            context.Map.IsSortable = true;
         }
 
         return Task.CompletedTask;

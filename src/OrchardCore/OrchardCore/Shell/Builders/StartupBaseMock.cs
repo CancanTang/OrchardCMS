@@ -36,8 +36,6 @@ internal sealed class StartupBaseMock : StartupBase
     /// <inheritdoc />
     public override int ConfigureOrder { get; }
 
-    internal Type StartupType => _startup.GetType();
-
     public override void ConfigureServices(IServiceCollection services)
     {
         if (_configureService == null)

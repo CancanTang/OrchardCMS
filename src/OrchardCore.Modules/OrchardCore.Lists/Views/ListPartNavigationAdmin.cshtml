@@ -1,21 +1,18 @@
 @using Microsoft.AspNetCore.Authorization
 @using OrchardCore.ContentManagement
 @using OrchardCore.Contents
-@using OrchardCore.Localization.Data
-@using System.Security.Claims
 @model OrchardCore.Lists.ViewModels.ListPartNavigationAdminViewModel
 @inject IContentManager ContentManager
 @inject IAuthorizationService AuthorizationService
-@inject IDataLocalizer D
 @{
     var authorizedContentTypeDefinitions = new List<ContentTypeDefinition>();
     foreach (var contentTypeDefinition in Model.ContainedContentTypeDefinitions)
     {
-        if (!await AuthorizationService.AuthorizeContentTypeAsync(User, CommonPermissions.EditContent, contentTypeDefinition.Name, User.FindFirstValue(ClaimTypes.NameIdentifier)))
+        if (!await AuthorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, await ContentManager.NewAsync(contentTypeDefinition.Name)))
         {
             continue;
         }
-
+        
         authorizedContentTypeDefinitions.Add(contentTypeDefinition);
     }
 }
@@ -31,7 +28,7 @@
             @if (await AuthorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, Model.Container))
             {
                 <a class="btn btn-primary me-1" asp-action="Edit" asp-controller="Admin" asp-route-contentItemId="@Model.Container.ContentItemId" asp-route-area="OrchardCore.Contents">
-                    @T["Edit {0}", D[Model.ContainerContentTypeDefinition?.DisplayName, "Content Types"].Value]
+                    @T["Edit {0}", Model.ContainerContentTypeDefinition?.DisplayName]
                 </a>
             }
 
@@ -39,21 +36,28 @@
             {
                 var contentTypeDefinition = authorizedContentTypeDefinitions.FirstOrDefault();
 
-                <a class="btn btn-secondary" asp-action="Create" asp-controller="Admin" asp-route-id="@contentTypeDefinition.Name" asp-route-area="OrchardCore.Contents" asp-route-ListPart.ContainerId="@Model.Container.ContentItemId" asp-route-ListPart.ContainerContentType="@Model.ContainerContentTypeDefinition?.Name" asp-route-ListPart.ContentType="@contentTypeDefinition.Name" asp-route-ListPart.EnableOrdering="@Model.EnableOrdering" asp-route-returnUrl="@FullRequestPath">
-                    @T["Create {0}", D[contentTypeDefinition.DisplayName, "Content Types"].Value]
-                </a>
+                if (await AuthorizationService.AuthorizeContentTypeAsync(User, CommonPermissions.EditContent, contentTypeDefinition, User.Identity.Name))
+                {
+                    <a class="btn btn-secondary" asp-action="Create" asp-controller="Admin" asp-route-id="@contentTypeDefinition.Name" asp-route-area="OrchardCore.Contents" asp-route-ListPart.ContainerId="@Model.Container.ContentItemId" asp-route-ListPart.ContainerContentType="@Model.ContainerContentTypeDefinition?.Name" asp-route-ListPart.ContentType="@contentTypeDefinition.Name" asp-route-ListPart.EnableOrdering="@Model.EnableOrdering" asp-route-returnUrl="@FullRequestPath">
+                        @T["Create {0}", contentTypeDefinition.DisplayName]
+                    </a>
+                }
             }
             else if (authorizedContentTypeDefinitions.Count > 1)
             {
                 <a class="btn btn-secondary dropdown-toggle" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     @T["New"]
                 </a>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
                     @foreach (var containedContentTypeDefinition in authorizedContentTypeDefinitions)
                     {
+                        if (!await AuthorizationService.AuthorizeContentTypeAsync(User, CommonPermissions.EditContent, containedContentTypeDefinition, User.Identity.Name))
+                        {
+                            continue;
+                        }
                         <li>
                             <a class="dropdown-item" asp-action="Create" asp-controller="Admin" asp-route-id="@containedContentTypeDefinition.Name" asp-route-area="OrchardCore.Contents" asp-route-ListPart.ContainerId="@Model.Container.ContentItemId" asp-route-ListPart.ContainerContentType="@Model.ContainerContentTypeDefinition?.Name" asp-route-ListPart.ContentType="@containedContentTypeDefinition.Name" asp-route-ListPart.EnableOrdering="@Model.EnableOrdering" asp-route-returnUrl="@FullRequestPath">
-                                @D[containedContentTypeDefinition.DisplayName, "Content Types"]
+                                @containedContentTypeDefinition.DisplayName
                             </a>
                         </li>
                     }

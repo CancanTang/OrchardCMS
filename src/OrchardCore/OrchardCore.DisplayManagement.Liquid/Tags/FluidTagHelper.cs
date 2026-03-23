@@ -78,6 +78,7 @@ public static class FluidTagHelper
             }
         }
 
+        Interlocked.CompareExchange(ref _uniqueId, long.MaxValue, 0);
         var id = Interlocked.Increment(ref _uniqueId);
 
         var tagHelperContext = new TagHelperContext(contextAttributes, new Dictionary<object, object>(), id.ToString());

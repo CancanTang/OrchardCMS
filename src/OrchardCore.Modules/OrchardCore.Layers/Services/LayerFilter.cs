@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
@@ -31,6 +30,7 @@ public sealed class LayerFilter : IAsyncResultFilter
     private readonly IRuleService _ruleService;
     private readonly IMemoryCache _memoryCache;
     private readonly IThemeManager _themeManager;
+    private readonly IAdminThemeService _adminThemeService;
     private readonly IAuthorizationService _authorizationService;
     private readonly ILayerService _layerService;
     private readonly IVolatileDocumentManager<LayerState> _layerStateManager;
@@ -44,6 +44,7 @@ public sealed class LayerFilter : IAsyncResultFilter
         IRuleService ruleService,
         IMemoryCache memoryCache,
         IThemeManager themeManager,
+        IAdminThemeService adminThemeService,
         IAuthorizationService authorizationService,
         IVolatileDocumentManager<LayerState> layerStateManager)
     {
@@ -55,6 +56,7 @@ public sealed class LayerFilter : IAsyncResultFilter
         _ruleService = ruleService;
         _memoryCache = memoryCache;
         _themeManager = themeManager;
+        _adminThemeService = adminThemeService;
         _authorizationService = authorizationService;
         _layerStateManager = layerStateManager;
     }
@@ -67,11 +69,7 @@ public sealed class LayerFilter : IAsyncResultFilter
             // Even if the Admin attribute is not applied we might be using the admin theme, for instance in Login views.
             // In this case don't render Layers.
             var selectedTheme = (await _themeManager.GetThemeAsync())?.Id;
-
-            var _adminThemeService = context.HttpContext.RequestServices.GetService<IAdminThemeService>();
-
-            var adminTheme = await _adminThemeService?.GetAdminThemeNameAsync();
-
+            var adminTheme = await _adminThemeService.GetAdminThemeNameAsync();
             if (selectedTheme == adminTheme)
             {
                 await next.Invoke();
@@ -141,12 +139,8 @@ public sealed class LayerFilter : IAsyncResultFilter
                         Content = widgetContent,
                     };
 
-                    // Get cached alternates and add them efficiently
-                    var cachedAlternates = WidgetWrapperAlternatesFactory.GetAlternates(
-                        contentItem.ContentType,
-                        widget.Zone);
-
-                    wrapper.Metadata.Alternates.AddRange(cachedAlternates);
+                    wrapper.Metadata.Alternates.Add("Widget_Wrapper__" + contentItem.ContentType);
+                    wrapper.Metadata.Alternates.Add("Widget_Wrapper__Zone__" + widget.Zone);
 
                     var contentZone = layout.Zones[widget.Zone];
 

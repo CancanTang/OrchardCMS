@@ -1,12 +1,10 @@
 using System.ComponentModel;
-using OrchardCore.ContentManagement.Metadata.Settings;
 
 namespace OrchardCore.Markdown.Settings;
 
-public class MarkdownFieldSettings : FieldSettings
+public class MarkdownFieldSettings
 {
     [DefaultValue(true)]
     public bool SanitizeHtml { get; set; } = true;
-
-    public bool RenderLiquid { get; set; }
+    public string Hint { get; set; }
 }

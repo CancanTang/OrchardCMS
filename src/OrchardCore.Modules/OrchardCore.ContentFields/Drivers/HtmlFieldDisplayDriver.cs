@@ -49,8 +49,7 @@ public sealed class HtmlFieldDisplayDriver : ContentFieldDisplayDriver<HtmlField
             model.PartFieldDefinition = context.PartFieldDefinition;
 
             var settings = context.PartFieldDefinition.GetSettings<HtmlFieldSettings>();
-
-            if (settings.RenderLiquid)
+            if (!settings.SanitizeHtml)
             {
                 model.Html = await _liquidTemplateManager.RenderStringAsync(field.Html, _htmlEncoder, model,
                     new Dictionary<string, FluidValue>() { ["ContentItem"] = new ObjectValue(field.ContentItem) });
@@ -64,8 +63,8 @@ public sealed class HtmlFieldDisplayDriver : ContentFieldDisplayDriver<HtmlField
                 });
 
         })
-        .Location(OrchardCoreConstants.DisplayType.Detail, "Content")
-        .Location(OrchardCoreConstants.DisplayType.Summary, "Content");
+        .Location("Detail", "Content")
+        .Location("Summary", "Content");
     }
 
     public override IDisplayResult Edit(HtmlField field, BuildFieldEditorContext context)
@@ -82,24 +81,22 @@ public sealed class HtmlFieldDisplayDriver : ContentFieldDisplayDriver<HtmlField
     public override async Task<IDisplayResult> UpdateAsync(HtmlField field, UpdateFieldEditorContext context)
     {
         var viewModel = new EditHtmlFieldViewModel();
-        var settings = context.PartFieldDefinition.GetSettings<HtmlFieldSettings>();
 
+        var settings = context.PartFieldDefinition.GetSettings<HtmlFieldSettings>();
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix, f => f.Html);
 
-        field.Html = settings.SanitizeHtml
-            ? _htmlSanitizerService.Sanitize(viewModel.Html)
-            : viewModel.Html;
-
-        if (settings.RenderLiquid
-            && !string.IsNullOrEmpty(field.Html)
-            && !_liquidTemplateManager.Validate(field.Html, out var errors))
+        if (!string.IsNullOrEmpty(viewModel.Html) && !_liquidTemplateManager.Validate(viewModel.Html, out var errors))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(field.Html),
-                S[settings.SanitizeHtml
-                    ? "{0} contains invalid Liquid expression. Note that HTML sanitization affects the value being saved and thus can break Liquid code: {1}"
-                    : "{0} contains invalid Liquid expression: {1}",
-                    context.PartFieldDefinition.DisplayName(),
-                    string.Join(" ", errors)]);
+            var fieldName = context.PartFieldDefinition.DisplayName();
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(viewModel.Html), S["{0} doesn't contain a valid Liquid expression. Details: {1}",
+                fieldName,
+                string.Join(' ', errors)]);
+        }
+        else
+        {
+            field.Html = settings.SanitizeHtml ? _htmlSanitizerService.Sanitize(viewModel.Html) : viewModel.Html;
         }
 
         return Edit(field, context);

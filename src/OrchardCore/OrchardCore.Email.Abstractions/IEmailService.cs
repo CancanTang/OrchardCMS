@@ -1,5 +1,3 @@
-using OrchardCore.Infrastructure;
-
 namespace OrchardCore.Email;
 
 public interface IEmailService
@@ -10,5 +8,5 @@ public interface IEmailService
     /// <param name="message">The message to send.</param>
     /// <param name="providerName">The technical name of the Email provider. When null or empty, the default provider is used.</param>
     /// <returns>EmailResult object.</returns>
-    Task<Result> SendAsync(MailMessage message, string providerName = null);
+    Task<EmailResult> SendAsync(MailMessage message, string providerName = null);
 }

@@ -53,13 +53,13 @@ public static class StringExtensions
 
         // Search beginning of word.
         var backup = characterCount;
-        while (characterCount > 0 && char.IsAsciiLetter(text[characterCount - 1]))
+        while (characterCount > 0 && text[characterCount - 1].IsLetter())
         {
             characterCount--;
         }
 
         // Search previous word.
-        while (characterCount > 0 && char.IsWhiteSpace(text[characterCount - 1]))
+        while (characterCount > 0 && text[characterCount - 1].IsSpace())
         {
             characterCount--;
         }
@@ -90,7 +90,7 @@ public static class StringExtensions
         for (var i = 0; i < friendlier.Length; i++)
         {
             var current = friendlier[i];
-            if (char.IsAsciiLetter(current) || (char.IsDigit(current) && cursor > 0))
+            if (IsLetter(current) || (char.IsDigit(current) && cursor > 0))
             {
                 if (previousIsNotLetter && i != 0 && cursor > 0)
                 {
@@ -158,7 +158,6 @@ public static class StringExtensions
     }
 
     // Not accounting for only \r (e.g. Apple OS 9 carriage return only new lines).
-    [Obsolete("This method will be removed in future releases. Use string.ReplaceLineEndings() instead.")]
     public static string ReplaceNewLinesWith(this string text, string replacement)
     {
         return string.IsNullOrWhiteSpace(text)
@@ -170,7 +169,6 @@ public static class StringExtensions
     }
 
     private static readonly char[] _validSegmentChars = "/?#[]@\"^{}|`<>\t\r\n\f ".ToCharArray();
-
     public static bool IsValidUrlSegment(this string segment)
     {
         // Valid isegment from rfc3987 - http://tools.ietf.org/html/rfc3987#page-8
@@ -202,14 +200,14 @@ public static class StringExtensions
 
         name = RemoveDiacritics(name);
         name = name.Strip(c =>
-            !char.IsAsciiLetter(c)
+            !c.IsLetter()
             && !char.IsDigit(c)
             );
 
         name = name.Trim();
 
         // Don't allow non A-Z chars as first letter, as they are not allowed in prefixes.
-        while (name.Length > 0 && !char.IsAsciiLetter(name[0]))
+        while (name.Length > 0 && !IsLetter(name[0]))
         {
             name = name[1..];
         }
@@ -225,13 +223,11 @@ public static class StringExtensions
     /// <summary>
     /// Whether the char is a letter between A and Z or not.
     /// </summary>
-    [Obsolete("This method will be removed in future releases. Use char.IsAsciiLetter() instead.")]
     public static bool IsLetter(this char c)
     {
         return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
     }
 
-    [Obsolete("This method will be removed in future releases. Use char.IsWhiteSpace() instead.")]
     public static bool IsSpace(this char c)
     {
         return (c == '\r' || c == '\n' || c == '\t' || c == '\f' || c == ' ');
@@ -403,6 +399,21 @@ public static class StringExtensions
         var pattern = $"{string.Join("|", replacements.Keys)}";
         return Regex.Replace(original, pattern, match => replacements[match.Value]);
     }
+
+#if NET8_0
+    [Obsolete("Don't use 'TrimEnd' as this has a different behavior in .NET 9.0. Use 'OrchardCore.ContentManagement.Utilities.TrimEndString' instead.")]
+    public static string TrimEnd(this string rough, string trim = "")
+    {
+        if (rough == null)
+        {
+            return null;
+        }
+
+        return rough.EndsWith(trim, StringComparison.Ordinal)
+                   ? rough[..^trim.Length]
+                   : rough;
+    }
+#endif
 
     public static string ReplaceLastOccurrence(this string source, string find, string replace)
     {

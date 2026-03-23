@@ -16,6 +16,13 @@ public interface IDataMigrationManager
     Task UpdateAllFeaturesAsync();
 
     /// <summary>
+    /// Updates the database to the latest version for the specified feature.
+    /// </summary>
+    /// <param name="feature">The feature to be uninstalled.</param>
+    [Obsolete("This method has been deprecated, please use UpdateAsync(string[] features) instead.")]
+    Task UpdateAsync(string feature) => UpdateAsync([feature]);
+
+    /// <summary>
     /// Updates the database to the latest version for the specified feature(s).
     /// </summary>
     /// <param name="features">The feature(s) to be updated.</param>

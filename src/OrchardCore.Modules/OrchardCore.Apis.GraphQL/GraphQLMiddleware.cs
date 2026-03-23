@@ -17,7 +17,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Apis.GraphQL.Queries;
 using OrchardCore.Apis.GraphQL.ValidationRules;
-using OrchardCore.Infrastructure;
 using OrchardCore.Routing;
 
 namespace OrchardCore.Apis.GraphQL;
@@ -30,8 +29,8 @@ public class GraphQLMiddleware : IMiddleware
     private readonly IGraphQLSerializer _serializer;
     private readonly IDocumentExecuter _executer;
     internal static readonly Encoding _utf8Encoding = new UTF8Encoding(false);
-    private static readonly MediaType _jsonMediaType = new(MediaTypeNames.Application.Json);
-    private static readonly MediaType _graphQlMediaType = new(MediaTypeNamesExtended.Application.GraphQL);
+    private static readonly MediaType _jsonMediaType = new("application/json");
+    private static readonly MediaType _graphQlMediaType = new("application/graphql");
 
     public GraphQLMiddleware(
         IOptions<GraphQLSettings> settingsOption,
@@ -46,40 +45,33 @@ public class GraphQLMiddleware : IMiddleware
         _graphQLTextSerializer = graphQLTextSerializer;
         _logger = logger;
     }
-
-    public Task InvokeAsync(HttpContext context, RequestDelegate next)
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         if (!IsGraphQLRequest(context))
         {
-            return next(context);
+            await next(context);
         }
         else
         {
-            return ProcessGraphQLRequestAsync(context);
+            var authenticationService = context.RequestServices.GetService<IAuthenticationService>();
+            var authenticateResult = await authenticationService.AuthenticateAsync(context, "Api");
+            if (authenticateResult.Succeeded)
+            {
+                context.User = authenticateResult.Principal;
+            }
+            var authorizationService = context.RequestServices.GetService<IAuthorizationService>();
+            var authorized = await authorizationService.AuthorizeAsync(context.User, GraphQLPermissions.ExecuteGraphQL);
+
+            if (authorized)
+            {
+                await ExecuteAsync(context);
+            }
+            else
+            {
+                await context.ChallengeAsync("Api");
+            }
         }
     }
-
-    private async Task ProcessGraphQLRequestAsync(HttpContext context)
-    {
-        var authenticationService = context.RequestServices.GetService<IAuthenticationService>();
-        var authenticateResult = await authenticationService.AuthenticateAsync(context, "Api");
-        if (authenticateResult.Succeeded)
-        {
-            context.User = authenticateResult.Principal;
-        }
-        var authorizationService = context.RequestServices.GetService<IAuthorizationService>();
-        var authorized = await authorizationService.AuthorizeAsync(context.User, GraphQLPermissions.ExecuteGraphQL);
-
-        if (authorized)
-        {
-            await ExecuteAsync(context);
-        }
-        else
-        {
-            await context.ChallengeAsync("Api");
-        }
-    }
-
     private bool IsGraphQLRequest(HttpContext context)
     {
         return context.Request.Path.StartsWithNormalizedSegments(_settings.Path, StringComparison.OrdinalIgnoreCase);

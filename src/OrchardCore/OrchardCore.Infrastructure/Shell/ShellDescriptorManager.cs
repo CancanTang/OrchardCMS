@@ -76,7 +76,7 @@ public class ShellDescriptorManager : IShellDescriptorManager
             .Concat(shellDescriptor.Features)
             .Distinct();
 
-        var featureIds = features.Select(sf => sf.Id);
+        var featureIds = features.Select(sf => sf.Id).ToArray();
 
         var missingDependencies = (await _extensionManager.LoadFeaturesAsync(featureIds))
             .Select(entry => entry.Id)

@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
@@ -74,6 +73,6 @@ public sealed class ExportFileController : Controller
             ZipFile.CreateFromDirectory(fileBuilder.Folder, archiveFileName);
         }
 
-        return new PhysicalFileResult(archiveFileName, MediaTypeNames.Application.Zip) { FileDownloadName = filename };
+        return new PhysicalFileResult(archiveFileName, "application/zip") { FileDownloadName = filename };
     }
 }

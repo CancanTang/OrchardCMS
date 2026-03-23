@@ -1,17 +1,15 @@
+using Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 
 namespace OrchardCore.Mvc;
 
-// Note: MvcRazorRuntimeCompilationOptions is deprecated in .NET 10
-// This class is kept for backward compatibility but will be removed in future versions
-#pragma warning disable ASPDEPR003 // Razor runtime compilation is obsolete
 public class RazorCompilationFileProviderAccessor
 {
-    private readonly Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation.MvcRazorRuntimeCompilationOptions _options;
+    private readonly MvcRazorRuntimeCompilationOptions _options;
     private IFileProvider _compositeFileProvider;
 
-    public RazorCompilationFileProviderAccessor(IOptions<Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation.MvcRazorRuntimeCompilationOptions> options)
+    public RazorCompilationFileProviderAccessor(IOptions<MvcRazorRuntimeCompilationOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -28,7 +26,7 @@ public class RazorCompilationFileProviderAccessor
         }
     }
 
-    private static IFileProvider GetCompositeFileProvider(Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation.MvcRazorRuntimeCompilationOptions options)
+    private static IFileProvider GetCompositeFileProvider(MvcRazorRuntimeCompilationOptions options)
     {
         var fileProviders = options.FileProviders;
 
@@ -40,4 +38,3 @@ public class RazorCompilationFileProviderAccessor
         return new CompositeFileProvider(fileProviders);
     }
 }
-#pragma warning restore ASPDEPR003

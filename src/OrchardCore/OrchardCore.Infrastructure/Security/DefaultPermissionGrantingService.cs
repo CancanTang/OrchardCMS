@@ -27,18 +27,15 @@ public class DefaultPermissionGrantingService : IPermissionGrantingService
     private static void GetGrantingNamesInternal(Permission permission, HashSet<string> stack)
     {
         // The given name is tested
-        if (!stack.Add(permission.Name))
-        {
-            // Avoid potential recursion
-            return;
-        }
+        stack.Add(permission.Name);
 
         // Iterate implied permissions to grant, it present
-        if (permission.ImpliedBy != null)
+        if (permission.ImpliedBy != null && permission.ImpliedBy.Any())
         {
             foreach (var impliedBy in permission.ImpliedBy)
             {
-                if (impliedBy == null)
+                // Avoid potential recursion
+                if (impliedBy == null || stack.Contains(impliedBy.Name))
                 {
                     continue;
                 }

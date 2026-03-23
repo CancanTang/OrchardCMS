@@ -10,6 +10,7 @@ using OrchardCore.Email;
 using OrchardCore.Email.Azure;
 using OrchardCore.Email.Azure.Services;
 using OrchardCore.Email.Azure.ViewModels;
+using OrchardCore.Email.Core;
 using OrchardCore.Email.Services;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
@@ -58,7 +59,7 @@ public sealed class AzureEmailSettingsDisplayDriver : SiteDisplayDriver<AzureEma
         {
             model.IsEnabled = settings.IsEnabled;
             model.DefaultSender = settings.DefaultSender;
-            model.ConnectionString = settings.ConnectionString;
+            model.HasConnectionString = !string.IsNullOrWhiteSpace(settings.ConnectionString);
         }).Location("Content:5#Azure Communication Services")
         .OnGroup(SettingsGroupId);
     }
@@ -104,24 +105,22 @@ public sealed class AzureEmailSettingsDisplayDriver : SiteDisplayDriver<AzureEma
 
             settings.DefaultSender = model.DefaultSender;
 
-            if (string.IsNullOrWhiteSpace(model.ConnectionString))
+            if (string.IsNullOrWhiteSpace(model.ConnectionString)
+                && settings.ConnectionString is null)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionString), S["Connection string is required."]);
             }
-            else
+            else if (!string.IsNullOrWhiteSpace(model.ConnectionString))
             {
-                if (model.ConnectionString != settings.ConnectionString)
-                {
-                    // Encrypt the connection string.
-                    var protector = _dataProtectionProvider.CreateProtector(AzureEmailOptionsConfiguration.ProtectorName);
+                // Encrypt the connection string.
+                var protector = _dataProtectionProvider.CreateProtector(AzureEmailOptionsConfiguration.ProtectorName);
 
-                    var protectedConnection = protector.Protect(model.ConnectionString);
+                var protectedConnection = protector.Protect(model.ConnectionString);
 
-                    // Check if the connection string changed before setting it.
-                    hasChanges |= protectedConnection != settings.ConnectionString;
+                // Check if the connection string changed before setting it.
+                hasChanges |= protectedConnection != settings.ConnectionString;
 
-                    settings.ConnectionString = protectedConnection;
-                }
+                settings.ConnectionString = protectedConnection;
             }
         }
 

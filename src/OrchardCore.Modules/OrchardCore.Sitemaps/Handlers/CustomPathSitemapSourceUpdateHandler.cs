@@ -21,8 +21,6 @@ public class CustomPathSitemapSourceUpdateHandler : ISitemapSourceUpdateHandler
             return;
         }
 
-        var sitemapNeedsUpdate = false;
-
         foreach (var sitemap in sitemaps)
         {
             // Do not break out of this loop, as it must check each sitemap.
@@ -35,13 +33,9 @@ public class CustomPathSitemapSourceUpdateHandler : ISitemapSourceUpdateHandler
                 }
 
                 sitemap.Identifier = IdGenerator.GenerateId();
-                sitemapNeedsUpdate = true;
             }
         }
 
-        if (sitemapNeedsUpdate)
-        {
-            await _sitemapManager.UpdateSitemapAsync();
-        }
+        await _sitemapManager.UpdateSitemapAsync();
     }
 }

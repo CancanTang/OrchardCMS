@@ -1,5 +1,5 @@
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentTypes.Services;
+using OrchardCore.ContentTypes.ViewModels;
 
 namespace OrchardCore.DataLocalization.Services.Tests;
 
@@ -9,15 +9,15 @@ public class ContentTypeDataLocalizationProviderTests
 
     public ContentTypeDataLocalizationProviderTests()
     {
-        var contentDefinitionManager = new Mock<IContentDefinitionManager>();
-        contentDefinitionManager.Setup(service => service.ListTypeDefinitionsAsync())
-            .ReturnsAsync(() => new List<ContentTypeDefinition> {
-                new("Article", "Article"),
-                new("BlogPost", "BlogPost"),
-                new("News", "News"),
+        var contentDefinitionService = new Mock<IContentDefinitionService>();
+        contentDefinitionService.Setup(service => service.GetTypesAsync())
+            .ReturnsAsync(() => new List<EditTypeViewModel> {
+                new() { DisplayName = "Article" },
+                new() { DisplayName = "BlogPost" },
+                new() { DisplayName = "News" },
             });
 
-        //_contentTypeDataLocalizationProvider = new ContentTypeDataLocalizationProvider(contentDefinitionManager.Object);
+        //_contentTypeDataLocalizationProvider = new ContentTypeDataLocalizationProvider(contentDefinitionService.Object);
     }
 
     //[InlineData("Article", "es", "Artículo")]

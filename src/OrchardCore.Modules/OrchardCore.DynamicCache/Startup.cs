@@ -29,6 +29,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITagRemovedEventHandler>(sp => sp.GetRequiredService<IDynamicCacheService>());
 
         services.AddScoped<IShapeDisplayEvents, DynamicCacheShapeDisplayEvents>();
+        services.AddShapeAttributes<CachedShapeWrapperShapes>();
 
         services.AddSingleton<IDynamicCache, DefaultDynamicCache>();
         services.AddSingleton<DynamicCacheTagHelperService>();

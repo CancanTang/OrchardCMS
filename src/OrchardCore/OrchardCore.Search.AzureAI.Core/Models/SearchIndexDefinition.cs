@@ -1,5 +1,4 @@
-using OrchardCore.Indexing.Models;
-using static OrchardCore.Indexing.DocumentIndex;
+using static OrchardCore.Indexing.DocumentIndexBase;
 
 namespace OrchardCore.Search.AzureAI.Models;
 
@@ -8,18 +7,16 @@ public sealed class SearchIndexDefinition
     public SearchIndexDefinition(
         AzureAISearchIndexMap indexMap,
         DocumentIndexEntry indexEntry,
-        IndexProfile index)
+        AzureAISearchIndexSettings indexSettings)
     {
         Map = indexMap;
         IndexEntry = indexEntry;
-        IndexProfile = index;
+        IndexSettings = indexSettings;
     }
 
     public AzureAISearchIndexMap Map { get; }
 
     public DocumentIndexEntry IndexEntry { get; }
 
-    public IndexProfile IndexProfile { get; }
-
-    public bool IsRootField { get; set; }
+    public AzureAISearchIndexSettings IndexSettings { get; }
 }

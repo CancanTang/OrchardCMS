@@ -1,10 +1,9 @@
 using Azure;
 using Azure.Search.Documents.Indexes.Models;
-using OrchardCore.Indexing;
 
 namespace OrchardCore.Search.AzureAI.Models;
 
-public class AzureAISearchDefaultOptions : ISearchProviderOptions
+public class AzureAISearchDefaultOptions
 {
     public const string DefaultAnalyzer = LexicalAnalyzerName.Values.StandardLucene;
 

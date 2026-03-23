@@ -1,57 +1,33 @@
-using System.Globalization;
-using OrchardCore.Localization;
-using OrchardCore.Localization.Data;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using OrchardCore.Security.Permissions;
 
 namespace OrchardCore.DataLocalization;
 
 /// <summary>
-/// Provides permissions for the Data Localization module.
+/// Represents the localization module permissions.
 /// </summary>
-public sealed class Permissions : IPermissionProvider
+public class Permissions : IPermissionProvider
 {
-    private readonly ILocalizationService _localizationService;
+    /// <summary>
+    /// Gets a permission for managing the cultures.
+    /// </summary>
+    public static readonly Permission ManageLocalization = new("ManageLocalization", "Manage dynamic localizations");
 
-    public Permissions(ILocalizationService localizationService)
-    {
-        _localizationService = localizationService;
-    }
+    private readonly IEnumerable<Permission> _allPermissions =
+    [
+        ManageLocalization
+    ];
 
-    public async Task<IEnumerable<Permission>> GetPermissionsAsync()
-    {
-        var permissions = new List<Permission>
-        {
-            DataLocalizationPermissions.ViewDynamicTranslations,
-            DataLocalizationPermissions.ManageTranslations,
-            DataLocalizationPermissions.ManageLocalization,
-        };
-
-        var supportedCultures = await _localizationService.GetSupportedCulturesAsync();
-
-        foreach (var cultureName in supportedCultures)
-        {
-            var cultureInfo = CultureInfo.GetCultureInfo(cultureName);
-            var displayName = !string.IsNullOrEmpty(cultureInfo.DisplayName)
-                ? cultureInfo.DisplayName
-                : cultureInfo.NativeName;
-
-            permissions.Add(DataLocalizationPermissions.CreateCulturePermission(cultureName, displayName));
-        }
-
-        return permissions;
-    }
+    public Task<IEnumerable<Permission>> GetPermissionsAsync()
+        => Task.FromResult(_allPermissions);
 
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype
         {
-            Name = OrchardCoreConstants.Roles.Administrator,
-            Permissions = [DataLocalizationPermissions.ManageTranslations],
-        },
-        new PermissionStereotype
-        {
-            Name = OrchardCoreConstants.Roles.Editor,
-            Permissions = [DataLocalizationPermissions.ViewDynamicTranslations],
+            Name = "Administrator",
+            Permissions = _allPermissions,
         },
     ];
 }

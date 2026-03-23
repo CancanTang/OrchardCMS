@@ -143,7 +143,6 @@ public class AutoSetupMiddleware
                     }
 
                     httpContext.Response.Redirect(pathBase);
-                    return;
                 }
                 else
                 {

@@ -2,17 +2,16 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Indexing;
 
 namespace OrchardCore.Search.Lucene.Settings;
 
 public sealed class ContentPickerFieldLuceneEditorSettingsDriver : ContentPartFieldDefinitionDisplayDriver
 {
-    private readonly IIndexProfileStore _indexProfileStore;
+    private readonly LuceneIndexSettingsService _luceneIndexSettingsService;
 
-    public ContentPickerFieldLuceneEditorSettingsDriver(IIndexProfileStore indexProfileStore)
+    public ContentPickerFieldLuceneEditorSettingsDriver(LuceneIndexSettingsService luceneIndexSettingsService)
     {
-        _indexProfileStore = indexProfileStore;
+        _luceneIndexSettingsService = luceneIndexSettingsService;
     }
 
     public override IDisplayResult Edit(ContentPartFieldDefinition partFieldDefinition, BuildEditorContext context)
@@ -22,7 +21,7 @@ public sealed class ContentPickerFieldLuceneEditorSettingsDriver : ContentPartFi
             var settings = partFieldDefinition.GetSettings<ContentPickerFieldLuceneEditorSettings>();
 
             model.Index = settings.Index;
-            model.Indices = (await _indexProfileStore.GetByProviderAsync(LuceneConstants.ProviderName)).Select(x => x.IndexName).ToArray();
+            model.Indices = (await _luceneIndexSettingsService.GetSettingsAsync()).Select(x => x.IndexName).ToArray();
         }).Location("Editor");
     }
 

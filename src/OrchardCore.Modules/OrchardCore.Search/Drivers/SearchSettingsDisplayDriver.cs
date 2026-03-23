@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Indexing;
+using OrchardCore.Search.Abstractions;
 using OrchardCore.Search.Models;
 using OrchardCore.Search.ViewModels;
 using OrchardCore.Settings;
@@ -18,17 +19,17 @@ public sealed class SearchSettingsDisplayDriver : SiteDisplayDriver<SearchSettin
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IServiceProvider _serviceProvider;
 
     public SearchSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IIndexProfileStore indexProfileStore
+        IServiceProvider serviceProvider
         )
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _indexProfileStore = indexProfileStore;
+        _serviceProvider = serviceProvider;
     }
 
     protected override string SettingsGroupId
@@ -43,14 +44,14 @@ public sealed class SearchSettingsDisplayDriver : SiteDisplayDriver<SearchSettin
             return null;
         }
 
-        return Initialize<SearchSettingsViewModel>("SearchSettings_Edit", async model =>
+        return Initialize<SearchSettingsViewModel>("SearchSettings_Edit", model =>
         {
-            model.DefaultIndexProfileName = settings.DefaultIndexProfileName;
+            var searchServices = _serviceProvider.GetServices<ISearchService>();
+
+            model.SearchServices = searchServices.Select(service => new SelectListItem(service.Name, service.Name)).ToList();
             model.Placeholder = settings.Placeholder;
             model.PageTitle = settings.PageTitle;
-            model.Indexes = (await _indexProfileStore.GetAllAsync())
-                .Select(index => new SelectListItem(index.Name, index.Name))
-                .ToArray();
+            model.ProviderName = settings.ProviderName;
         }).Location("Content:2")
         .OnGroup(SettingsGroupId);
     }
@@ -68,7 +69,7 @@ public sealed class SearchSettingsDisplayDriver : SiteDisplayDriver<SearchSettin
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        section.DefaultIndexProfileName = model.DefaultIndexProfileName;
+        section.ProviderName = model.ProviderName;
         section.Placeholder = model.Placeholder;
         section.PageTitle = model.PageTitle;
 

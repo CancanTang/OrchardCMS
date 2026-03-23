@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using System.Text;
 using System.Xml;
 using Microsoft.AspNetCore.Mvc;
@@ -57,7 +56,7 @@ public sealed class HomeController : Controller
 
         var content = Encoding.UTF8.GetString(stream.GetReadOnlySequence());
 
-        return Content(content, MediaTypeNames.Text.Xml);
+        return Content(content, "text/xml");
     }
 
     private async Task<XRpcMethodResponse> DispatchAsync(XRpcMethodCall request)

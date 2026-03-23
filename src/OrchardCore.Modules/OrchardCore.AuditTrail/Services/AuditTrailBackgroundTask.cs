@@ -36,10 +36,7 @@ public sealed class AuditTrailBackgroundTask : IBackgroundTask
 
             logger.LogDebug("Starting Audit Trail trimming.");
             var deletedEvents = await auditTrailManager.TrimEventsAsync(TimeSpan.FromDays(settings.RetentionDays));
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Audit Trail trimming completed. {EventCount} events were deleted.", deletedEvents);
-            }
+            logger.LogDebug("Audit Trail trimming completed. {EventCount} events were deleted.", deletedEvents);
             settings.LastRunUtc = clock.UtcNow;
 
             var container = await siteService.LoadSiteSettingsAsync();

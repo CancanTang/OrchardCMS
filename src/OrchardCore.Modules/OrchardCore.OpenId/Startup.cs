@@ -23,7 +23,6 @@ using OrchardCore.Navigation;
 using OrchardCore.OpenId.Configuration;
 using OrchardCore.OpenId.Deployment;
 using OrchardCore.OpenId.Drivers;
-using OrchardCore.OpenId.Handlers;
 using OrchardCore.OpenId.Migrations;
 using OrchardCore.OpenId.Recipes;
 using OrchardCore.OpenId.Services;
@@ -33,6 +32,7 @@ using OrchardCore.OpenId.Tasks;
 using OrchardCore.Recipes;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace OrchardCore.OpenId;
 
@@ -52,6 +52,7 @@ public sealed class Startup : StartupBase
             });
 
         services.AddPermissionProvider<Permissions>();
+        services.AddNavigationProvider<ManagementAdminMenu>();
     }
 }
 
@@ -65,7 +66,10 @@ public sealed class ClientStartup : StartupBase
         services.TryAddSingleton<IOpenIdClientService, OpenIdClientService>();
 
         // Note: the following services are registered using TryAddEnumerable to prevent duplicate registrations.
-        services.AddSiteDisplayDriver<OpenIdClientSettingsDisplayDriver>();
+        services.TryAddEnumerable(new[]
+        {
+            ServiceDescriptor.Scoped<IDisplayDriver<ISite>, OpenIdClientSettingsDisplayDriver>(),
+        });
 
         services.AddRecipeExecutionStep<OpenIdClientSettingsStep>();
         // Register the options initializers required by the OpenID Connect client handler.
@@ -93,7 +97,6 @@ public sealed class ServerStartup : StartupBase
             {
                 options.UseAspNetCore();
                 options.UseDataProtection();
-                options.AddEventHandler(PersistStoresHandler.Descriptor);
             });
 
         services.TryAddSingleton<IOpenIdServerService, OpenIdServerService>();
@@ -101,12 +104,11 @@ public sealed class ServerStartup : StartupBase
         services.AddDataMigration<DefaultScopesMigration>();
         services.AddDataMigration<PushedAuthorizationRequestsMigration>();
 
-        services.AddDisplayDriver<OpenIdServerSettings, OpenIdServerSettingsDisplayDriver>();
-
         // Note: the following services are registered using TryAddEnumerable to prevent duplicate registrations.
         services.TryAddEnumerable(new[]
         {
             ServiceDescriptor.Scoped<IRoleRemovedEventHandler, OpenIdApplicationRoleRemovedEventHandler>(),
+            ServiceDescriptor.Scoped<IDisplayDriver<OpenIdServerSettings>, OpenIdServerSettingsDisplayDriver>(),
             ServiceDescriptor.Singleton<IBackgroundTask, OpenIdBackgroundTask>(),
         });
 
@@ -222,7 +224,10 @@ public sealed class ValidationStartup : StartupBase
         services.TryAddSingleton<IOpenIdValidationService, OpenIdValidationService>();
 
         // Note: the following services are registered using TryAddEnumerable to prevent duplicate registrations.
-        services.AddDisplayDriver<OpenIdValidationSettings, OpenIdValidationSettingsDisplayDriver>();
+        services.TryAddEnumerable(new[]
+        {
+            ServiceDescriptor.Scoped<IDisplayDriver<OpenIdValidationSettings>, OpenIdValidationSettingsDisplayDriver>(),
+        });
 
         services.AddRecipeExecutionStep<OpenIdValidationSettingsStep>();
 
@@ -249,15 +254,6 @@ public sealed class ValidationDeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<OpenIdValidationDeploymentSource, OpenIdValidationDeploymentStep, OpenIdValidationDeploymentStepDriver>();
-    }
-}
-
-[Feature(OpenIdConstants.Features.Management)]
-public sealed class ManagementStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddNavigationProvider<ManagementAdminMenu>();
     }
 }
 

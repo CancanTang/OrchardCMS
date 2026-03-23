@@ -31,7 +31,7 @@ internal sealed class ActiveHandlerTrackingEntry : IDisposable
         Scope = scope;
         Lifetime = lifetime;
 
-        _lock = new();
+        _lock = new object();
     }
 
     public LifetimeTrackingHttpMessageHandler Handler { get; private set; }

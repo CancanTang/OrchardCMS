@@ -258,14 +258,16 @@ public sealed class AdminController : Controller
                     case UsersBulkAction.Disable:
                         if (!isSameUser && canEditUser)
                         {
-                            await _userService.DisableAsync(user);
+                            user.IsEnabled = false;
+                            await _userManager.UpdateAsync(user);
                             await _notifier.SuccessAsync(H["User {0} successfully disabled.", user.UserName]);
                         }
                         break;
                     case UsersBulkAction.Enable:
                         if (!isSameUser && canEditUser)
                         {
-                            await _userService.EnableAsync(user);
+                            user.IsEnabled = true;
+                            await _userManager.UpdateAsync(user);
                             await _notifier.SuccessAsync(H["User {0} successfully enabled.", user.UserName]);
                         }
                         break;
@@ -494,7 +496,7 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    public async Task<IActionResult> EditPassword(string id, string returnUrl)
+    public async Task<IActionResult> EditPassword(string id)
     {
         if (await _userManager.FindByIdAsync(id) is not User user)
         {
@@ -506,18 +508,13 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var model = new EditPasswordViewModel
-        {
-            UsernameOrEmail = user.UserName,
-        };
-
-        ViewData["ReturnUrl"] = returnUrl;
+        var model = new ResetPasswordViewModel { UsernameOrEmail = user.UserName };
 
         return View(model);
     }
 
     [HttpPost]
-    public async Task<IActionResult> EditPassword(EditPasswordViewModel model, string returnUrl)
+    public async Task<IActionResult> EditPassword(ResetPasswordViewModel model)
     {
         if (await _userService.GetUserAsync(model.UsernameOrEmail) is not User user)
         {
@@ -529,84 +526,19 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var sameUser = user.UserName == User.Identity.Name;
-        if (!sameUser)
-        {
-            ModelState.Remove(nameof(EditPasswordViewModel.CurrentPassword));
-        }
-
         if (ModelState.IsValid)
         {
-            var passwordChanged = sameUser
-                ? await _userService.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword, ModelState.AddModelError)
-                : await _userService.ResetPasswordAsync(model.UsernameOrEmail, await _userManager.GeneratePasswordResetTokenAsync(user), model.NewPassword, ModelState.AddModelError);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            if (passwordChanged)
+            if (await _userService.ResetPasswordAsync(model.UsernameOrEmail, token, model.NewPassword, ModelState.AddModelError))
             {
-                await _notifier.SuccessAsync(H["The password has been changed successfully."]);
-
-                if (!string.IsNullOrEmpty(returnUrl))
-                {
-                    return this.LocalRedirect(returnUrl, true);
-                }
+                await _notifier.SuccessAsync(H["Password updated correctly."]);
 
                 return RedirectToAction(nameof(Index));
             }
         }
 
-        ViewData["ReturnUrl"] = returnUrl;
-
         return View(model);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Enable(string id)
-    {
-        if (await _userManager.FindByIdAsync(id) is not User user)
-        {
-            return NotFound();
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(User, UsersPermissions.EditUsers, user))
-        {
-            return Forbid();
-        }
-
-        if (await _userService.EnableAsync(user))
-        {
-            await _notifier.SuccessAsync(H["User account was successfully enabled."]);
-        }
-        else
-        {
-            await _notifier.ErrorAsync(H["Could not enable the user."]);
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Disable(string id)
-    {
-        if (await _userManager.FindByIdAsync(id) is not User user)
-        {
-            return NotFound();
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(User, UsersPermissions.EditUsers, user))
-        {
-            return Forbid();
-        }
-
-        if (await _userService.DisableAsync(user))
-        {
-            await _notifier.SuccessAsync(H["User account was successfully disabled."]);
-        }
-        else
-        {
-            await _notifier.ErrorAsync(H["Could not disable the user."]);
-        }
-
-        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]

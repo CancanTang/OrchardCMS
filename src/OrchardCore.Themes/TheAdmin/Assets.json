@@ -1,7 +1,6 @@
 [
   {
     "action": "sass",
-    "generateRTL": true,
     "name": "theme-theadmin",
     "source": "Assets/scss/TheAdmin.scss",
     "dest": "wwwroot/css/",
@@ -17,7 +16,6 @@
   },
   {
     "action": "sass",
-    "generateRTL": true,
     "name": "theme-theadmin-login",
     "source": "Assets/scss/login.scss",
     "dest": "wwwroot/css/",

@@ -38,7 +38,7 @@ public class HtmlBodyQueryObjectType : ObjectGraphType<HtmlBodyPart>
 
         var html = ctx.Source.Html;
 
-        if (settings.RenderLiquid)
+        if (!settings.SanitizeHtml)
         {
             var model = new HtmlBodyPartViewModel()
             {

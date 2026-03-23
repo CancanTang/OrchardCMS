@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Modules;
 
@@ -9,16 +8,16 @@ namespace OrchardCore.ContentTypes.Services;
 public class StereotypeService : IStereotypeService
 {
     private readonly IEnumerable<IStereotypesProvider> _providers;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContentDefinitionService _contentDefinitionService;
     private readonly ILogger<StereotypeService> _logger;
 
     public StereotypeService(
         IEnumerable<IStereotypesProvider> providers,
-        IContentDefinitionManager contentDefinitionManager,
+        IContentDefinitionService contentDefinitionService,
         ILogger<StereotypeService> logger)
     {
         _providers = providers;
-        _contentDefinitionManager = contentDefinitionManager;
+        _contentDefinitionService = contentDefinitionService;
         _logger = logger;
     }
 
@@ -29,9 +28,9 @@ public class StereotypeService : IStereotypeService
         var stereotypes = providerStereotypes.Select(providerStereotype => providerStereotype.Stereotype)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+        foreach (var contentType in await _contentDefinitionService.GetTypesAsync())
         {
-            if (!contentType.TryGetStereotype(out var stereotype) ||
+            if (!contentType.TypeDefinition.TryGetStereotype(out var stereotype) ||
                 stereotypes.Contains(stereotype))
             {
                 continue;

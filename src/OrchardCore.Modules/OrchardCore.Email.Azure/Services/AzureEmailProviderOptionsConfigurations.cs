@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using OrchardCore.Email.Azure.Models;
-using OrchardCore.Email.Services;
+using OrchardCore.Email.Core.Services;
 
 namespace OrchardCore.Email.Azure.Services;
 

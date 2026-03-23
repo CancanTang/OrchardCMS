@@ -57,7 +57,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ListPartSettingsDisplayDriver>();
         services.AddDataMigration<Migrations>();
-        services.AddScoped<IDocumentIndexHandler, ContainedPartContentIndexHandler>();
+        services.AddScoped<IContentItemIndexHandler, ContainedPartContentIndexHandler>();
         services.AddScoped<IContainerService, ContainerService>();
     }
 }

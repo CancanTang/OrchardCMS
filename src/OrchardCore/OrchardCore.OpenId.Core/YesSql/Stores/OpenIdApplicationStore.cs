@@ -35,7 +35,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _session.Query<TApplication>(collection: OpenIdCollection).CountAsync(cancellationToken);
+        return await _session.Query<TApplication>(collection: OpenIdCollection).CountAsync();
     }
 
     /// <inheritdoc/>
@@ -49,8 +49,8 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _session.SaveAsync(application, collection: OpenIdCollection, cancellationToken: cancellationToken);
-        await _session.FlushAsync(cancellationToken);
+        await _session.SaveAsync(application, collection: OpenIdCollection);
+        await _session.FlushAsync();
     }
 
     /// <inheritdoc/>
@@ -61,7 +61,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
         cancellationToken.ThrowIfCancellationRequested();
 
         _session.Delete(application, collection: OpenIdCollection);
-        await _session.FlushAsync(cancellationToken);
+        await _session.FlushAsync();
     }
 
     /// <inheritdoc/>
@@ -71,7 +71,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _session.Query<TApplication, OpenIdApplicationIndex>(index => index.ApplicationId == identifier, collection: OpenIdCollection).FirstOrDefaultAsync(cancellationToken);
+        return await _session.Query<TApplication, OpenIdApplicationIndex>(index => index.ApplicationId == identifier, collection: OpenIdCollection).FirstOrDefaultAsync();
     }
 
     /// <inheritdoc/>
@@ -81,7 +81,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await _session.Query<TApplication, OpenIdApplicationIndex>(index => index.ClientId == identifier, collection: OpenIdCollection).FirstOrDefaultAsync(cancellationToken);
+        return await _session.Query<TApplication, OpenIdApplicationIndex>(index => index.ClientId == identifier, collection: OpenIdCollection).FirstOrDefaultAsync();
     }
 
     /// <inheritdoc/>
@@ -103,7 +103,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
 
         return _session.Query<TApplication, OpenIdAppByLogoutUriIndex>(
             index => index.LogoutRedirectUri == uri,
-            collection: OpenIdCollection).ToAsyncEnumerable(cancellationToken);
+            collection: OpenIdCollection).ToAsyncEnumerable();
     }
 
     /// <inheritdoc/>
@@ -115,7 +115,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
 
         return _session.Query<TApplication, OpenIdAppByRedirectUriIndex>(
             index => index.RedirectUri == uri,
-            collection: OpenIdCollection).ToAsyncEnumerable(cancellationToken);
+            collection: OpenIdCollection).ToAsyncEnumerable();
     }
 
     public virtual ValueTask<string> GetApplicationTypeAsync(TApplication application, CancellationToken cancellationToken)
@@ -285,7 +285,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
             query = query.Take(count.Value);
         }
 
-        return query.ToAsyncEnumerable(cancellationToken);
+        return query.ToAsyncEnumerable();
     }
 
     /// <inheritdoc/>
@@ -460,11 +460,11 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _session.SaveAsync(application, checkConcurrency: true, collection: OpenIdCollection, cancellationToken: cancellationToken);
+        await _session.SaveAsync(application, checkConcurrency: true, collection: OpenIdCollection);
 
         try
         {
-            await _session.SaveChangesAsync(cancellationToken);
+            await _session.SaveChangesAsync();
         }
         catch (ConcurrencyException exception)
         {
@@ -488,7 +488,7 @@ public class OpenIdApplicationStore<TApplication> : IOpenIdApplicationStore<TApp
     {
         ArgumentException.ThrowIfNullOrEmpty(role);
 
-        return _session.Query<TApplication, OpenIdAppByRoleNameIndex>(index => index.RoleName == role, collection: OpenIdCollection).ToAsyncEnumerable(cancellationToken);
+        return _session.Query<TApplication, OpenIdAppByRoleNameIndex>(index => index.RoleName == role, collection: OpenIdCollection).ToAsyncEnumerable();
     }
 
     /// <inheritdoc/>

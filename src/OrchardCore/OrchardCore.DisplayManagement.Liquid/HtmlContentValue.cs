@@ -28,7 +28,12 @@ public class HtmlContentValue : FluidValue
         return _value == other;
     }
 
-    public override ValueTask<FluidValue> GetValueAsync(string name, TemplateContext context)
+    protected override FluidValue GetIndex(FluidValue index, TemplateContext context)
+    {
+        return NilValue.Instance;
+    }
+
+    protected override FluidValue GetValue(string name, TemplateContext context)
     {
         return NilValue.Instance;
     }

@@ -8,7 +8,6 @@ using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
 using OrchardCore.Workflows.Services;
-using YesSql;
 
 namespace OrchardCore.Contents.Workflows.Activities;
 
@@ -16,20 +15,17 @@ public class CreateContentTask : ContentTask
 {
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly JavaScriptEncoder _javaScriptEncoder;
-    private readonly ISession _session;
 
     public CreateContentTask(
         IContentManager contentManager,
         IWorkflowExpressionEvaluator expressionEvaluator,
         IWorkflowScriptEvaluator scriptEvaluator,
         IStringLocalizer<CreateContentTask> localizer,
-        JavaScriptEncoder javaScriptEncoder,
-        ISession session)
+        JavaScriptEncoder javaScriptEncoder)
         : base(contentManager, scriptEvaluator, localizer)
     {
         _expressionEvaluator = expressionEvaluator;
         _javaScriptEncoder = javaScriptEncoder;
-        _session = session;
     }
 
     public override string Name => nameof(CreateContentTask);
@@ -126,8 +122,6 @@ public class CreateContentTask : ContentTask
         }
 
         workflowContext.LastResult = result;
-
-        await _session.CancelAsync();
 
         return Outcomes("Failed");
     }

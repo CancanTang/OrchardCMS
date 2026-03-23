@@ -17,7 +17,7 @@ public class MarkdownTests
 
         var markdown = @"<h1>foo</h1>";
         var html = markdownService.ToHtml(markdown);
-        html = html.ReplaceLineEndings(string.Empty);
+        html = html.Replace("\n", "");
         Assert.Equal(@"<p>&lt;h1&gt;foo&lt;/h1&gt;</p>", html);
     }
 
@@ -42,7 +42,7 @@ public class MarkdownTests
 
         var markdown = @"<h1>foo</h1>";
         var html = markdownService.ToHtml(markdown);
-        html = html.ReplaceLineEndings(string.Empty);
+        html = html.Replace("\n", "");
         Assert.Equal(@"<h1>foo</h1>", html);
     }
 }

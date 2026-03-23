@@ -1,5 +1,4 @@
 using System.IO.Hashing;
-using System.Net.Mime;
 using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
@@ -78,7 +77,7 @@ public static class GetSdkEndpoints
             // max-age is needed because immutable is not widely supported
             context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
 
-            return Results.Bytes(scriptBytes, MediaTypeNames.Text.JavaScript);
+            return Results.Bytes(scriptBytes, "application/javascript");
         }
     }
 
@@ -134,7 +133,7 @@ public static class GetSdkEndpoints
             // max-age is needed because immutable is not widely supported
             context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
 
-            return Results.Bytes(scriptBytes, MediaTypeNames.Text.JavaScript);
+            return Results.Bytes(scriptBytes, "application/javascript");
         }
     }
 }

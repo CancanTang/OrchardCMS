@@ -1,6 +1,6 @@
 namespace OrchardCore.Localization.Data.Tests;
 
-public class DataLocalizerTests : IDisposable
+public class DataLocalizerTests
 {
     private readonly Mock<IDataTranslationProvider> _dataTranslationProviderMock;
     private readonly IMemoryCache _memoryCache;
@@ -176,8 +176,6 @@ public class DataLocalizerTests : IDisposable
         // Assert
         Assert.Equal(expected.Length, translations.Length);
     }
-
-    public void Dispose() => _memoryCache?.Dispose();
 
     private static IMemoryCache GetMemoryCache()
     {

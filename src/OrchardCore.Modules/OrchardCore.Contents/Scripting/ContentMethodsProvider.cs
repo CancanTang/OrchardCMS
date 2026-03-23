@@ -46,8 +46,6 @@ public sealed class ContentMethodsProvider : IGlobalMethodProvider
                     return contentItem;
                 }
 
-                var session = serviceProvider.GetRequiredService<YesSql.ISession>();
-                session.CancelAsync().GetAwaiter().GetResult();
                 throw new ValidationException(string.Join(", ", result.Errors));
             }),
         };
@@ -63,8 +61,6 @@ public sealed class ContentMethodsProvider : IGlobalMethodProvider
                 var result = contentManager.ValidateAsync(contentItem).GetAwaiter().GetResult();
                 if (!result.Succeeded)
                 {
-                    var session = serviceProvider.GetRequiredService<YesSql.ISession>();
-                    session.CancelAsync().GetAwaiter().GetResult();
                     throw new ValidationException(string.Join(", ", result.Errors));
                 }
             }),

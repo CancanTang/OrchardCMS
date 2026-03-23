@@ -32,13 +32,9 @@ public abstract class BaseShapeTagHelper : TagHelper
     // and then not added to the properties of the shape we are building.
 
     internal string Cache { get; set; }
-
     internal TimeSpan? FixedDuration { get; set; }
-
     internal TimeSpan? SlidingDuration { get; set; }
-
     internal string Context { get; set; }
-
     internal string Tag { get; set; }
 
     protected BaseShapeTagHelper(IShapeFactory shapeFactory, IDisplayHelper displayHelper)
@@ -84,34 +80,34 @@ public abstract class BaseShapeTagHelper : TagHelper
             Type = output.TagName;
         }
 
-        if (string.IsNullOrWhiteSpace(Cache) && output.Attributes.TryGetAttribute("cache-id", out var cacheId))
+        if (string.IsNullOrWhiteSpace(Cache) && output.Attributes.ContainsName("cache-id"))
         {
-            Cache = Convert.ToString(cacheId.Value);
+            Cache = Convert.ToString(output.Attributes["cache-id"].Value);
         }
 
-        if (string.IsNullOrWhiteSpace(Context) && output.Attributes.TryGetAttribute("cache-context", out var cacheContext))
+        if (string.IsNullOrWhiteSpace(Context) && output.Attributes.ContainsName("cache-context"))
         {
-            Context = Convert.ToString(cacheContext.Value);
+            Context = Convert.ToString(output.Attributes["cache-context"].Value);
         }
 
-        if (string.IsNullOrWhiteSpace(Tag) && output.Attributes.TryGetAttribute("cache-tag", out var cacheTag))
+        if (string.IsNullOrWhiteSpace(Tag) && output.Attributes.ContainsName("cache-tag"))
         {
-            Tag = Convert.ToString(cacheTag.Value);
+            Tag = Convert.ToString(output.Attributes["cache-tag"].Value);
         }
 
-        if (!FixedDuration.HasValue && output.Attributes.TryGetAttribute("cache-fixed-duration", out var cashDuration))
+        if (!FixedDuration.HasValue && output.Attributes.ContainsName("cache-fixed-duration"))
         {
             TimeSpan timespan;
-            if (TimeSpan.TryParse(Convert.ToString(cashDuration.Value), out timespan))
+            if (TimeSpan.TryParse(Convert.ToString(output.Attributes["cache-fixed-duration"].Value), out timespan))
             {
                 FixedDuration = timespan;
             }
         }
 
-        if (!SlidingDuration.HasValue && output.Attributes.TryGetAttribute("cache-sliding-duration", out var slidingDuration))
+        if (!SlidingDuration.HasValue && output.Attributes.ContainsName("cache-sliding-duration"))
         {
             TimeSpan timespan;
-            if (TimeSpan.TryParse(Convert.ToString(slidingDuration.Value), out timespan))
+            if (TimeSpan.TryParse(Convert.ToString(output.Attributes["cache-sliding-duration"].Value), out timespan))
             {
                 SlidingDuration = timespan;
             }
@@ -119,24 +115,19 @@ public abstract class BaseShapeTagHelper : TagHelper
 
         var shape = await _shapeFactory.CreateAsync(Type, Arguments.From(properties));
 
-        if (output.Attributes.TryGetAttribute("id", out var id))
+        if (output.Attributes.ContainsName("id"))
         {
-            shape.Id = Convert.ToString(id.Value);
+            shape.Id = Convert.ToString(output.Attributes["id"].Value);
         }
 
-        if (output.Attributes.TryGetAttribute("alternate", out var alternate))
+        if (output.Attributes.ContainsName("alternate"))
         {
-            shape.Metadata.Alternates.Add(Convert.ToString(alternate.Value));
+            shape.Metadata.Alternates.Add(Convert.ToString(output.Attributes["alternate"].Value));
         }
 
-        if (output.Attributes.TryGetAttribute("wrapper", out var wrapper))
+        if (output.Attributes.ContainsName("wrapper"))
         {
-            shape.Metadata.Wrappers.Add(Convert.ToString(wrapper.Value));
-        }
-
-        if (output.Attributes.TryGetAttribute("display-type", out var displayType))
-        {
-            shape.Metadata.DisplayType = Convert.ToString(displayType.Value);
+            shape.Metadata.Wrappers.Add(Convert.ToString(output.Attributes["wrapper"].Value));
         }
 
         tagHelperContext.Items[typeof(IShape)] = shape;

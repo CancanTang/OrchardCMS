@@ -33,14 +33,11 @@ public class ShellContainerFactoryTests
         applicationServices.AddSingleton<IHostSingletonAndScopedOfTheSameType, HostSingletonOfTheSameTypeAsScoped>();
         applicationServices.AddScoped<IHostSingletonAndScopedOfTheSameType, HostScopedOfTheSameTypeAsSingleton>();
 
-        var loggerMock = new Mock<ILogger<ShellContainerFactory>>();
-
         _shellContainerFactory = new ShellContainerFactory(
             new StubHostingEnvironment(),
             new StubExtensionManager(),
             _applicationServiceProvider = applicationServices.BuildServiceProvider(),
-            applicationServices,
-            loggerMock.Object
+            applicationServices
         );
     }
 
@@ -172,24 +169,6 @@ public class ShellContainerFactoryTests
         Assert.Equal(expectedFeatureInfos, typeFeatureProvider.GetFeaturesForDependency(typeof(TestService)));
     }
 
-    [Fact]
-    public async Task RawStartupIsAssignedToCorrectFeature()
-    {
-        var shellBlueprint = CreateBlueprint();
-
-        var expectedFeatureInfo = AddStartup(shellBlueprint, typeof(Startup));
-
-        var container = (await _shellContainerFactory
-            .CreateContainerAsync(_uninitializedDefaultShell, shellBlueprint))
-            .CreateScope()
-            .ServiceProvider;
-
-        var typeFeatureProvider = _applicationServiceProvider.GetService<ITypeFeatureProvider>();
-
-        Assert.IsType<TestService>(container.GetRequiredService(typeof(ITestService)));
-        Assert.Same(expectedFeatureInfo, typeFeatureProvider.GetFeatureForDependency(typeof(TestService)));
-    }
-
     private static ShellBlueprint CreateBlueprint()
     {
         return new ShellBlueprint
@@ -299,17 +278,6 @@ public class ShellContainerFactoryTests
             services.AddSingleton<ITwoHostSingletonsOfTheSameType, ShellSingletonOfTheSametype>();
             services.AddTransient<ITwoHostSingletonsOfTheSameType, ShellTransientOfTheSametype>();
             services.AddScoped<ITwoHostSingletonsOfTheSameType, ShellScopedOfTheSametype>();
-        }
-    }
-
-    // A raw startup class that is not derived from StartupBase. Must be named Startup.
-    private sealed class Startup
-    {
-#pragma warning disable CA1822 // Mark members as static
-        public void ConfigureServices(IServiceCollection services)
-#pragma warning restore CA1822 // Mark members as static
-        {
-            services.AddScoped<ITestService, TestService>();
         }
     }
 }

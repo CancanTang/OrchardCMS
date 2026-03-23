@@ -1,10 +1,9 @@
 using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Infrastructure.Html;
 using OrchardCore.Menu.Models;
@@ -16,7 +15,7 @@ namespace OrchardCore.Menu.Drivers;
 public sealed class HtmlMenuItemPartDisplayDriver : ContentPartDisplayDriver<HtmlMenuItemPart>
 {
     private readonly IUrlHelperFactory _urlHelperFactory;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IActionContextAccessor _actionContextAccessor;
     private readonly IHtmlSanitizerService _htmlSanitizerService;
     private readonly HtmlEncoder _htmlencoder;
 
@@ -24,14 +23,14 @@ public sealed class HtmlMenuItemPartDisplayDriver : ContentPartDisplayDriver<Htm
 
     public HtmlMenuItemPartDisplayDriver(
         IUrlHelperFactory urlHelperFactory,
-        IHttpContextAccessor httpContextAccessor,
+        IActionContextAccessor actionContextAccessor,
         IStringLocalizer<HtmlMenuItemPartDisplayDriver> localizer,
         IHtmlSanitizerService htmlSanitizerService,
         HtmlEncoder htmlencoder
         )
     {
         _urlHelperFactory = urlHelperFactory;
-        _httpContextAccessor = httpContextAccessor;
+        _actionContextAccessor = actionContextAccessor;
         _htmlSanitizerService = htmlSanitizerService;
         _htmlencoder = htmlencoder;
         S = localizer;
@@ -91,10 +90,7 @@ public sealed class HtmlMenuItemPartDisplayDriver : ContentPartDisplayDriver<Htm
 
             if (urlToValidate.StartsWith("~/", StringComparison.Ordinal))
             {
-                // In .NET 10, create ActionContext directly instead of using obsolete IActionContextAccessor
-                var httpContext = _httpContextAccessor.HttpContext;
-                var actionContext = await httpContext.GetActionContextAsync();
-                var urlHelper = _urlHelperFactory.GetUrlHelper(actionContext);
+                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
                 urlToValidate = urlHelper.Content(urlToValidate);
             }
 

@@ -5,8 +5,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.ReverseProxy.Configuration;
 using OrchardCore.ReverseProxy.Drivers;
+using OrchardCore.ReverseProxy.Services;
 using OrchardCore.ReverseProxy.Settings;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings.Deployment;
@@ -29,7 +29,8 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<Permissions>();
         services.AddSiteDisplayDriver<ReverseProxySettingsDisplayDriver>();
 
-        services.AddTransient<IConfigureOptions<ReverseProxySettings>, ReverseProxySettingsConfiguration>();
+        services.AddSingleton<ReverseProxyService>();
+
         services.AddTransient<IConfigureOptions<ForwardedHeadersOptions>, ForwardedHeadersOptionsConfiguration>();
     }
 }

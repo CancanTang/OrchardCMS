@@ -14,9 +14,7 @@ public class TitlePartHandler : ContentPartHandler<TitlePart>
 {
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
-
     private readonly HashSet<ContentItem> _contentItems = [];
-    private readonly Dictionary<string, TitlePartSettings> _settingsCache = [];
 
     protected readonly IStringLocalizer S;
 
@@ -36,11 +34,6 @@ public class TitlePartHandler : ContentPartHandler<TitlePart>
     }
 
     public override Task CreatedAsync(CreateContentContext context, TitlePart part)
-    {
-        return SetTitleAsync(part);
-    }
-
-    public override Task ClonedAsync(CloneContentContext context, TitlePart part)
     {
         return SetTitleAsync(part);
     }
@@ -96,7 +89,7 @@ public class TitlePartHandler : ContentPartHandler<TitlePart>
                     ["ContentItem"] = new ObjectValue(model.ContentItem),
                 });
 
-            title = title.ReplaceLineEndings(string.Empty);
+            title = title.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
             part.Title = title;
             part.ContentItem.DisplayText = title;
@@ -106,16 +99,9 @@ public class TitlePartHandler : ContentPartHandler<TitlePart>
 
     private async Task<TitlePartSettings> GetSettingsAsync(TitlePart part)
     {
-        if (!_settingsCache.TryGetValue(part.ContentItem.ContentType, out var settings))
-        {
-            var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(part.ContentItem.ContentType);
-            var contentTypePartDefinition = contentTypeDefinition.Parts.FirstOrDefault(x => string.Equals(x.PartDefinition.Name, nameof(TitlePart), StringComparison.Ordinal));
+        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(part.ContentItem.ContentType);
+        var contentTypePartDefinition = contentTypeDefinition.Parts.FirstOrDefault(x => string.Equals(x.PartDefinition.Name, nameof(TitlePart), StringComparison.Ordinal));
 
-            settings = contentTypePartDefinition.GetSettings<TitlePartSettings>();
-
-            _settingsCache[part.ContentItem.ContentType] = settings;
-        }
-
-        return settings;
+        return contentTypePartDefinition.GetSettings<TitlePartSettings>();
     }
 }

@@ -136,12 +136,16 @@ public abstract class Page : Microsoft.AspNetCore.Mvc.RazorPages.Page
         {
             if (ThemeLayout is IShape layout)
             {
-                if (layout.Metadata.Alternates.Last == value)
+                if (layout.Metadata.Alternates.Contains(value))
                 {
-                    return;
+                    if (layout.Metadata.Alternates.Last == value)
+                    {
+                        return;
+                    }
+
+                    layout.Metadata.Alternates.Remove(value);
                 }
 
-                layout.Metadata.Alternates.Remove(value);
                 layout.Metadata.Alternates.Add(value);
             }
         }

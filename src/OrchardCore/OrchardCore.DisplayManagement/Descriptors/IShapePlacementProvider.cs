@@ -3,7 +3,7 @@ using OrchardCore.DisplayManagement.Handlers;
 namespace OrchardCore.DisplayManagement.Descriptors;
 
 /// <summary>
-/// Defines a service capable of providing a contextualized <see cref="IPlacementInfoResolver"/> for a given shape building context.
+/// Represents a marker interface for classes that provide Shape placement informations.
 /// </summary>
 public interface IShapePlacementProvider
 {

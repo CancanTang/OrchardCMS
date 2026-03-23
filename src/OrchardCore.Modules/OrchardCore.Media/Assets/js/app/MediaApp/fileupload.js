@@ -20,8 +20,7 @@ $(document).on('mediaApp:ready', function () {
             done: function (e, data) {
                 $.each(data.result.files, function (index, file) {
                     if (!file.error) {
-                        mediaApp.mediaItems.push(file);
-                        mediaApp.getPermittedStorage();
+                        mediaApp.mediaItems.push(file)
                     }
                 });
             }

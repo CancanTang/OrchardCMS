@@ -1,4 +1,3 @@
-@using OrchardCore.ContentTypes.Shapes
 @using OrchardCore.DisplayManagement
 @inject OrchardCore.ContentManagement.Display.IContentItemDisplayManager ContentItemDisplayManager
 @inject OrchardCore.ContentManagement.Metadata.IContentDefinitionManager ContentDefinitionManager
@@ -6,7 +5,7 @@
 @{
     var contentDefinitions = await ContentDefinitionManager.ListTypeDefinitionsAsync();
     //Set Model (Current Shape) as Child content of Outer Frame, Later this Model is used to render other shapes
-    var contentCardFrameShape = (ContentCardFrameShape)await Factory.CreateAsync<ContentCardFrameShape>("ContentCard_Frame");
+    var contentCardFrame = await New.ContentCard_Frame();
 
     var contentItem = Model.ContentItem;
     Model.ContentTypeValue = contentItem.ContentType;
@@ -21,7 +20,7 @@
             //Assign prefix
             if (string.IsNullOrEmpty(Model.PrefixValue))
             {
-                Model.PrefixValue = $"z{Guid.NewGuid():n}";
+                Model.PrefixValue = Guid.NewGuid().ToString("n");
             }
 
             //Build Editor for Content Item
@@ -43,9 +42,9 @@
             Model.Metadata.Alternates.Clear();
             Model.Metadata.Type = "ContentCard_Editor";
 
-            contentCardFrameShape.ChildContent = Model;
+            contentCardFrame.ChildContent = Model;
 
-            contentCardFrameShape.ColumnSize = Model.ColumnSize;
+            contentCardFrame.ColumnSize = Model.ColumnSize;
         }
         else
         {
@@ -59,9 +58,9 @@
             Model.Metadata.Alternates.Clear();
             Model.Metadata.Type = "ContentCard_Preview";
 
-            contentCardFrameShape.ChildContent = Model;
+            contentCardFrame.ChildContent = Model;
         }
         //Display Outer Frame
-        @await DisplayAsync(contentCardFrameShape)
+        @await DisplayAsync(contentCardFrame)
     }
 }

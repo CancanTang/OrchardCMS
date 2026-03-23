@@ -1,9 +1,11 @@
 using System.Globalization;
 using System.Text.Encodings.Web;
 using Fluid;
+using Fluid.Accessors;
 using Fluid.Values;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -11,9 +13,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Extensions;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
@@ -21,44 +25,38 @@ using TimeZoneConverter;
 
 namespace OrchardCore.DisplayManagement.Liquid;
 
-internal static class LiquidViewTemplate
+public class LiquidViewTemplate
 {
     public const string ViewsFolder = "Views";
     public const string ViewExtension = ".liquid";
-    private static readonly MemoryCache s_cache = new(new MemoryCacheOptions());
+    public static readonly MemoryCache Cache = new(new MemoryCacheOptions());
+    public IFluidTemplate FluidTemplate { get; }
 
-    internal static Task RenderAsync(RazorPage<dynamic> page)
+    public LiquidViewTemplate(IFluidTemplate fluidTemplate)
     {
-        var services = page.Context.RequestServices;
-        var path = Path.ChangeExtension(page.ViewContext.ExecutingFilePath, ViewExtension);
-
-        var templateTask = ParseAsync(path, services, s_cache);
-
-        return !templateTask.IsCompletedSuccessfully
-            ? Awaited(templateTask, page, services)
-            : RenderAsyncCore(page, services, templateTask.Result);
-
-        static async Task Awaited(Task<IFluidTemplate> templateTask, RazorPage<dynamic> page, IServiceProvider services)
-        {
-            var template = await templateTask;
-            await RenderAsyncCore(page, services, template);
-        }
+        FluidTemplate = fluidTemplate;
     }
 
-    private static async Task RenderAsyncCore(RazorPage<dynamic> page, IServiceProvider services, IFluidTemplate template)
+    internal static async Task RenderAsync(RazorPage<dynamic> page)
     {
+        var services = page.Context.RequestServices;
+        var liquidViewParser = services.GetRequiredService<LiquidViewParser>();
+        var path = Path.ChangeExtension(page.ViewContext.ExecutingFilePath, ViewExtension);
         var templateOptions = services.GetRequiredService<IOptions<TemplateOptions>>().Value;
+
+        var isDevelopment = services.GetRequiredService<IHostEnvironment>().IsDevelopment();
+        var template = await ParseAsync(liquidViewParser, path, templateOptions.FileProvider, Cache, isDevelopment);
         var context = new LiquidTemplateContext(services, templateOptions);
         var htmlEncoder = services.GetRequiredService<HtmlEncoder>();
 
-        // Defer the buffer disposing so that a template can be rendered twice.
-        var content = new ViewBufferTextWriterContent(releaseOnWrite: false);
-        ShellScope.Current.RegisterBeforeDispose(scope => content.Dispose());
-
         try
         {
+            // Defer the buffer disposing so that a template can be rendered twice.
+            var content = new ViewBufferTextWriterContent(releaseOnWrite: false);
+            ShellScope.Current.RegisterBeforeDispose(scope => content.Dispose());
+
             await context.EnterScopeAsync(page.ViewContext, (object)page.Model);
-            await template.RenderAsync(content, htmlEncoder, context);
+            await template.FluidTemplate.RenderAsync(content, htmlEncoder, context);
 
             // Use ViewBufferTextWriter.Write(object) from ASP.NET directly since it will use a special code path
             // for IHtmlContent. This prevent the TextWriter methods from copying the content from our buffer
@@ -72,16 +70,10 @@ internal static class LiquidViewTemplate
         }
     }
 
-    private static Task<IFluidTemplate> ParseAsync(string path, IServiceProvider services, IMemoryCache cache)
+    public static Task<LiquidViewTemplate> ParseAsync(LiquidViewParser parser, string path, IFileProvider fileProvider, IMemoryCache cache, bool isDevelopment)
     {
         return cache.GetOrCreateAsync(path, async entry =>
         {
-            var parser = services.GetRequiredService<LiquidViewParser>();
-            var templateOptions = services.GetRequiredService<IOptions<TemplateOptions>>().Value;
-            var isDevelopment = services.GetRequiredService<IHostEnvironment>().IsDevelopment();
-
-            var fileProvider = templateOptions.FileProvider;
-
             entry.SetSlidingExpiration(TimeSpan.FromHours(1));
             var fileInfo = fileProvider.GetFileInfo(path);
 
@@ -95,7 +87,7 @@ internal static class LiquidViewTemplate
 
             if (parser.TryParse(await sr.ReadToEndAsync(), out var template, out var errors))
             {
-                return template;
+                return new LiquidViewTemplate(template);
             }
 
             throw new Exception($"Failed to parse liquid file {path}: {string.Join(System.Environment.NewLine, errors)}");
@@ -103,9 +95,57 @@ internal static class LiquidViewTemplate
     }
 }
 
+internal sealed class ShapeAccessor : DelegateAccessor<object, object>
+{
+    public ShapeAccessor() : base((obj, name, ctx) => _getter(obj, name))
+    {
+    }
+
+    private static Func<object, string, object> _getter => (o, n) =>
+    {
+        if (o is Shape shape)
+        {
+            object obj = n switch
+            {
+                nameof(Shape.Id) => shape.Id,
+                nameof(Shape.TagName) => shape.TagName,
+                nameof(Shape.HasItems) => shape.HasItems,
+                nameof(Shape.Classes) => shape.Classes,
+                nameof(Shape.Attributes) => shape.Attributes,
+                nameof(Shape.Metadata) => shape.Metadata,
+                nameof(Shape.Items) => shape.Items,
+                nameof(Shape.Properties) => shape.Properties,
+                _ => null
+            };
+
+            if (obj != null)
+            {
+                return obj;
+            }
+
+            if (shape.Properties.TryGetValue(n, out obj))
+            {
+                return obj;
+            }
+
+            // 'MyType-MyField-FieldType_Display__DisplayMode'.
+            var namedShaped = shape.Named(n);
+            if (namedShaped != null)
+            {
+                return namedShaped;
+            }
+
+            // 'MyNamedPart', 'MyType__MyField' 'MyType-MyField'.
+            return shape.NormalizedNamed(n.Replace("__", "-"));
+        }
+
+        return null;
+    };
+}
+
 public static class LiquidViewTemplateExtensions
 {
-    public static async Task<string> RenderAsync(this IFluidTemplate template, TextEncoder encoder, LiquidTemplateContext context, object model)
+    public static async Task<string> RenderAsync(this LiquidViewTemplate template, TextEncoder encoder, LiquidTemplateContext context, object model)
     {
         var viewContextAccessor = context.Services.GetRequiredService<ViewContextAccessor>();
         var viewContext = viewContextAccessor.ViewContext;
@@ -115,7 +155,7 @@ public static class LiquidViewTemplateExtensions
         try
         {
             await context.EnterScopeAsync(viewContext, model);
-            return await template.RenderAsync(context, encoder);
+            return await template.FluidTemplate.RenderAsync(context, encoder);
         }
         finally
         {
@@ -123,7 +163,7 @@ public static class LiquidViewTemplateExtensions
         }
     }
 
-    public static async Task RenderAsync(this IFluidTemplate template, TextWriter writer, TextEncoder encoder, LiquidTemplateContext context, object model)
+    public static async Task RenderAsync(this LiquidViewTemplate template, TextWriter writer, TextEncoder encoder, LiquidTemplateContext context, object model)
     {
         var viewContextAccessor = context.Services.GetRequiredService<ViewContextAccessor>();
         var viewContext = viewContextAccessor.ViewContext;
@@ -133,7 +173,7 @@ public static class LiquidViewTemplateExtensions
         try
         {
             await context.EnterScopeAsync(viewContext, model);
-            await template.RenderAsync(writer, encoder, context);
+            await template.FluidTemplate.RenderAsync(writer, encoder, context);
         }
         finally
         {
@@ -143,9 +183,13 @@ public static class LiquidViewTemplateExtensions
 
     public static async Task<ViewContext> GetViewContextAsync(LiquidTemplateContext context)
     {
-        // In .NET 10, IActionContextAccessor is obsolete, so we create ActionContext directly
-        var httpContext = context.Services.GetRequiredService<IHttpContextAccessor>().HttpContext;
-        var actionContext = await httpContext.GetActionContextAsync();
+        var actionContext = context.Services.GetService<IActionContextAccessor>()?.ActionContext;
+
+        if (actionContext == null)
+        {
+            var httpContext = context.Services.GetRequiredService<IHttpContextAccessor>().HttpContext;
+            actionContext = await httpContext.GetActionContextAsync();
+        }
 
         return GetViewContext(actionContext);
     }
@@ -185,7 +229,7 @@ public static class LiquidViewTemplateExtensions
 
 public static class LiquidTemplateContextExtensions
 {
-    internal static async ValueTask EnterScopeAsync(this LiquidTemplateContext context, ViewContext viewContext, object model)
+    internal static async Task EnterScopeAsync(this LiquidTemplateContext context, ViewContext viewContext, object model)
     {
         if (!context.IsInitialized)
         {

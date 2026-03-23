@@ -89,7 +89,5 @@ public class AzureAIClientFactory
     }
 
     private ManagedIdentityCredential GetManagedIdentityCredential()
-        => !string.IsNullOrEmpty(_defaultOptions.IdentityClientId)
-        ? new(ManagedIdentityId.FromUserAssignedClientId(_defaultOptions.IdentityClientId))
-        : new(ManagedIdentityId.SystemAssigned);
+        => new(_defaultOptions.IdentityClientId);
 }

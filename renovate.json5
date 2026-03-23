@@ -5,63 +5,29 @@
     $schema: 'https://docs.renovatebot.com/renovate-schema.json',
     extends: [
         'config:recommended',
-        'helpers:pinGitHubActionDigests',
-        // See https://docs.renovatebot.com/semantic-commits/.
-        ':semanticCommitsDisabled',
     ],
     // See https://docs.renovatebot.com/configuration-options/#configmigration.
     configMigration: true,
     packageRules: [
-        // Such updates should never break, so are usually safe to automerge (unless another group below overrides it
-        // for a given dependency).
-        {
-            groupName: 'Non-Breaking Dependency Versions',
-            matchUpdateTypes: ['patch', 'pin', 'pinDigest'],
-            'automerge': true,
-        },
-        // Minor dependencies are ought to be non-breaking but can be (like
-        // https://github.com/OrchardCMS/OrchardCore/pull/17584), so better to keep them separate.
-        {
-            groupName: 'Minor Dependency Versions',
-            matchUpdateTypes: ['minor'],
-        },
-        // Elastic.Clients.Elasticsearch doesn't follow SemVer, so updates need to be tested manually and can't be
-        // auto-merged even if it's only a patch version update.
-        {
-            groupName: 'Elasticsearch',
-            matchPackageNames: [
-                'Elastic.Clients.Elasticsearch',
-            ],
-            // We need to keep this on 8.x for now, see
-            // https://github.com/OrchardCMS/OrchardCore/pull/17942#issuecomment-2903626717.
-            allowedVersions: '<9.0.0',
-        },
-
         // Disable certain updates.
         {
             // The .NET 8 versions of these packages need to stay on 8.x. We maintain a separate reference to the 
             // .NET 9 versions in Directory.Packages.props, only active when building for .NET 9.
             matchPackageNames: [
-                'AspNet.Security.OAuth.GitHub',
-                'Microsoft.AspNetCore.Authentication.Facebook',
-                'Microsoft.AspNetCore.Authentication.Google',
-                'Microsoft.AspNetCore.Authentication.MicrosoftAccount',
-                'Microsoft.AspNetCore.Authentication.OpenIdConnect',
-                'Microsoft.AspNetCore.Authentication.Twitter',
-                'Microsoft.AspNetCore.DataProtection.StackExchangeRedis',
-                'Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation',
-                'Microsoft.AspNetCore.Mvc.Testing',
-                'Microsoft.AspNetCore.Owin',
-                'Microsoft.AspNetCore.Authorization',
-                'Microsoft.Extensions.Caching.Memory',
-                'Microsoft.Extensions.Caching.StackExchangeRedis',
-                'Microsoft.Extensions.Http.Resilience',
+                '/^Microsoft\\.AspNetCore.*$/',
+                '/^Microsoft\\.Extensions.*$/',
                 'Serilog.AspNetCore',
-                'System.IO.Hashing',
                 'System.Text.Json',
             ],
             allowedVersions: '<9.0.0',
-            matchCurrentVersion: '/^8\\./',
+            matchCurrentVersion: '<9.0.0',
+        },
+        {
+            // See the corresponding comment in Directory.Packages.props.
+            matchPackageNames: [
+                'System.Drawing.Common',
+            ],
+            enabled: false,
         },
         {
             // See https://github.com/OrchardCMS/OrchardCore/issues/16318 on why we have NPM updates disabled.
@@ -70,49 +36,6 @@
             ],
             enabled: false,
         },
-        {
-            matchManagers: [
-                'npm',
-            ],
-            matchPackageNames: [
-                'trumbowyg',
-            ],
-            enabled: true,
-            groupName: 'Trumbowyg',
-        },
-        {
-            // See the the comment in global.json on why this is disabled.
-            groupName: 'global.json',
-            matchFileNames: ['global.json'],
-            enabled: false,
-        },
-        // These are database engines referenced in .github/workflows/functional_all_db.yml. They should match the
-        // minimum versions supported by YesSql, see:
-        // https://github.com/sebastienros/yessql/blob/main/.github/workflows/build.yml.
-        {
-            matchPackageNames: [
-                'postgres',
-                'mysql',
-                'mcr.microsoft.com/mssql/server',
-            ],
-            enabled: false,
-        },
-        // These are updated manually during a .NET SDK upgrade.
-        {
-            matchPackageNames: [
-                'mcr.microsoft.com/dotnet/aspnet',
-                'mcr.microsoft.com/dotnet/sdk',
-            ],
-            enabled: false,
-        },
-        // See the comment in src/docs/requirements.txt.
-        {
-            matchPackageNames: [
-                'click',
-            ],
-            enabled: false,
-        },
-
         // Groups of packages that we want to update together.
         {
             groupName: 'Azure.Communication packages',
@@ -173,10 +96,9 @@
     ],
     // With GitHub Actions, concurrency is not really an issue.
     prHourlyLimit: 0,
-    // Between 0:00 and 6:00 UTC on Sundays. Large time window to ensure that Renovate runs at least once then:
-    // https://docs.renovatebot.com/configuration-options/#schedule.
+    // We only need updates once a week.
     schedule: [
-        '* 0-6 * * 7',
+        'before 5am on Sunday',
     ],
     addLabels: ['dependencies'],
 }

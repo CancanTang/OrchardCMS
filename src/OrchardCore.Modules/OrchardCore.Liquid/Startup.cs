@@ -88,6 +88,8 @@ public sealed class LiquidStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<ILiquidTemplateManager, LiquidTemplateManager>();
+
         services.AddLiquidCoreServices();
     }
 }

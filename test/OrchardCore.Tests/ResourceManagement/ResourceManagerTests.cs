@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
@@ -7,7 +6,7 @@ using ResourceLocation = OrchardCore.ResourceManagement.ResourceLocation;
 
 namespace OrchardCore.Tests.ResourceManagement;
 
-public class ResourceManagerTests : IDisposable
+public class ResourceManagerTests
 {
     private const string BasePath = "http://host";
 
@@ -564,7 +563,7 @@ public class ResourceManagerTests : IDisposable
 
         resourceManager.RegisterUrl("stylesheet", "other.min.css", "other.css");    // Should not be rendered
         resourceManager.RegisterLink(new LinkEntry { Rel = "icon", Href = "/favicon.ico" });
-        resourceManager.RegisterLink(new LinkEntry { Rel = "alternate", Type = MediaTypeNames.Application.Pdf, Href = "/pdf" });
+        resourceManager.RegisterLink(new LinkEntry { Rel = "alternate", Type = "application/pdf", Href = "/pdf" });
 
         using var sw = new StringWriter();
         resourceManager.RenderHeadLink(sw);
@@ -577,7 +576,7 @@ public class ResourceManagerTests : IDisposable
 
         Assert.Equal(2, links.Count());
         Assert.Contains(links, link => link.Relation == "icon" && link.Href == $"{BasePath}/favicon.ico");
-        Assert.Contains(links, link => link.Relation == "alternate" && link.Type == MediaTypeNames.Application.Pdf && link.Href == $"{BasePath}/pdf");
+        Assert.Contains(links, link => link.Relation == "alternate" && link.Type == "application/pdf" && link.Href == $"{BasePath}/pdf");
     }
 
     [Fact]
@@ -887,8 +886,6 @@ public class ResourceManagerTests : IDisposable
             )
         );
     }
-
-    public void Dispose() => _browsingContext?.Dispose();
 
     #region Helpers
     private async Task<IDocument> ParseHtmlAsync(IHtmlContent content)

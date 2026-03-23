@@ -13,9 +13,4 @@ public abstract class MediaBlobStorageOptionsBase : BlobStorageOptions
     /// Remove Blob container on tenant removal if it exists.
     /// </summary>
     public bool RemoveContainer { get; set; }
-
-    /// <summary>
-    /// Remove files from base path instead of the entire container on tenant removal.
-    /// </summary>
-    public bool RemoveFilesFromBasePath { get; set; }
 }

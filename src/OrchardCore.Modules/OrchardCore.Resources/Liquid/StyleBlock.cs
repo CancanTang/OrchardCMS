@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using System.Text.Encodings.Web;
 using Cysharp.Text;
 using Fluid;
@@ -153,7 +152,7 @@ public class StyleBlock
             // If no type was specified, define a default one
             if (!builder.Attributes.ContainsKey("type"))
             {
-                builder.Attributes.Add("type", MediaTypeNames.Text.Css);
+                builder.Attributes.Add("type", "text/css");
             }
 
             if (at == ResourceLocation.Inline)

@@ -4,7 +4,7 @@ This module provides an Email provider for sending emails through the Simple Mai
 
 ## Simple Mail Transfer Protocol (SMTP) Settings
 
-To enable the `SMTP` provider, navigate to `Settings` → `Communication` → `Email`. Click on the `SMTP` tab, click the Enable checkbox, and provide your SMTP configuration. Then in the `Providers` tab, select SMTP as your default provider.
+To enable the `SMTP` provider, navigate to `Configurations` → `Settings` → `Email`. Click on the `SMTP` tab, click the Enable checkbox, and provide your SMTP configuration. Then in the `Providers` tab, select SMTP as your default provider.
 
 Here are the available SMTP settings
 
@@ -32,8 +32,7 @@ Here are the available SMTP settings
 You may configure the Default SMTP provider by the configuration provider using the following settings:
 
 ```json
-{
-  "OrchardCore_Email_Smtp": {
+"OrchardCore_Email_Smtp": {
     "DefaultSender": "",
     "DeliveryMethod": "Network",
     "PickupDirectoryLocation": "",
@@ -42,13 +41,12 @@ You may configure the Default SMTP provider by the configuration provider using 
     // Uncomment if SMTP server runs through a proxy server
     //"ProxyHost": "proxy.domain.com",
     //"ProxyPort": 5050,
-    "EncryptionMethod": "SslTls",
+    "EncryptionMethod": "SSLTLS",
     "AutoSelectEncryption": false,
     "UseDefaultCredentials": false,
     "RequireCredentials": true,
     "Username": "",
     "Password": ""
-  }
 }
 ```
 

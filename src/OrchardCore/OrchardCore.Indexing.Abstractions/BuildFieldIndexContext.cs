@@ -6,7 +6,7 @@ namespace OrchardCore.Indexing;
 public class BuildFieldIndexContext : BuildPartIndexContext
 {
     public BuildFieldIndexContext(
-        ContentItemDocumentIndex documentIndex,
+        DocumentIndex documentIndex,
         ContentItem contentItem,
         IList<string> keys,
         ContentPart contentPart,

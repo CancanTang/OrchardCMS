@@ -45,8 +45,8 @@ public sealed class MarkdownBodyPartDisplayDriver : ContentPartDisplayDriver<Mar
     public override IDisplayResult Display(MarkdownBodyPart markdownBodyPart, BuildPartDisplayContext context)
     {
         return Initialize<MarkdownBodyPartViewModel>(GetDisplayShapeType(context), m => BuildViewModel(m, markdownBodyPart, context))
-            .Location(OrchardCoreConstants.DisplayType.Detail, "Content")
-            .Location(OrchardCoreConstants.DisplayType.Summary, "Content");
+            .Location("Detail", "Content")
+            .Location("Summary", "Content");
     }
 
     public override IDisplayResult Edit(MarkdownBodyPart markdownBodyPart, BuildPartEditorContext context)
@@ -63,18 +63,13 @@ public sealed class MarkdownBodyPartDisplayDriver : ContentPartDisplayDriver<Mar
     public override async Task<IDisplayResult> UpdateAsync(MarkdownBodyPart model, UpdatePartEditorContext context)
     {
         var viewModel = new MarkdownBodyPartViewModel();
-        var settings = context.TypePartDefinition.GetSettings<MarkdownBodyPartSettings>();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix, vm => vm.Markdown);
 
-        if (settings.RenderLiquid
-            && !string.IsNullOrEmpty(viewModel.Markdown)
-            && !_liquidTemplateManager.Validate(viewModel.Markdown, out var errors))
+        if (!string.IsNullOrEmpty(viewModel.Markdown) && !_liquidTemplateManager.Validate(viewModel.Markdown, out var errors))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Markdown),
-                S["{0} contains invalid Liquid expression: {1}",
-                    context.TypePartDefinition.DisplayName(),
-                    string.Join(" ", errors)]);
+            var partName = context.TypePartDefinition.DisplayName();
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Markdown), S["{0} doesn't contain a valid Liquid expression. Details: {1}", partName, string.Join(" ", errors)]);
         }
         else
         {
@@ -90,17 +85,18 @@ public sealed class MarkdownBodyPartDisplayDriver : ContentPartDisplayDriver<Mar
         model.MarkdownBodyPart = markdownBodyPart;
         model.ContentItem = markdownBodyPart.ContentItem;
 
+        // The default Markdown option is to entity escape html
+        // so filters must be run after the markdown has been processed.
+        model.Html = _markdownService.ToHtml(model.Markdown ?? "");
+
         var settings = context.TypePartDefinition.GetSettings<MarkdownBodyPartSettings>();
 
-        if (settings.RenderLiquid)
+        // The liquid rendering is for backwards compatibility and can be removed in a future version.
+        if (!settings.SanitizeHtml)
         {
-            model.Markdown = await _liquidTemplateManager.RenderStringAsync(model.Markdown, _htmlEncoder, model,
+            model.Html = await _liquidTemplateManager.RenderStringAsync(model.Html, _htmlEncoder, model,
                 new Dictionary<string, FluidValue>() { ["ContentItem"] = new ObjectValue(model.ContentItem) });
         }
-
-        // The default Markdown option is to entity escape html so filters must be run after the markdown has been
-        // processed.
-        model.Html = _markdownService.ToHtml(model.Markdown ?? "");
 
         model.Html = await _shortcodeService.ProcessAsync(model.Html,
             new Context

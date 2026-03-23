@@ -37,14 +37,12 @@ public class BlogPostDeploymentContext : SiteContext
         OriginalBlogPost = await content.Content.ReadAsAsync<ContentItem>();
         OriginalBlogPostVersionId = OriginalBlogPost.ContentItemVersionId;
 
-        await UsingTenantScopeAsync(scope =>
+        await UsingTenantScopeAsync(async scope =>
         {
             var remoteClientService = scope.ServiceProvider.GetRequiredService<RemoteClientService>();
 
-            return remoteClientService.CreateRemoteClientAsync(RemoteDeploymentClientName, RemoteDeploymentApiKey);
+            await remoteClientService.CreateRemoteClientAsync(RemoteDeploymentClientName, RemoteDeploymentApiKey);
         });
-
-        await WaitForDeferredTasksAsync(TestContext.Current.CancellationToken);
     }
 
     public static JsonObject GetContentStepRecipe(ContentItem contentItem, Action<JsonObject> mutation)

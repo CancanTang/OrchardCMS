@@ -9,8 +9,8 @@ namespace OrchardCore.Locking;
 public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
 {
     private readonly ILogger _logger;
-    private readonly Dictionary<string, NamedSemaphore> _semaphores = [];
-    private bool _disposed;
+
+    private readonly Dictionary<string, Semaphore> _semaphores = [];
 
     public LocalLock(ILogger<LocalLock> logger)
     {
@@ -23,9 +23,6 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
     /// </summary>
     public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
         var semaphore = GetOrCreateSemaphore(key);
         await semaphore.Value.WaitAsync();
 
@@ -38,29 +35,17 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
     /// </summary>
     public async Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
         var semaphore = GetOrCreateSemaphore(key);
 
-        var effectiveTimeout = timeout != TimeSpan.MaxValue ? timeout : Timeout.InfiniteTimeSpan;
-        if (await semaphore.Value.WaitAsync(effectiveTimeout))
+        if (await semaphore.Value.WaitAsync(timeout != TimeSpan.MaxValue ? timeout : Timeout.InfiniteTimeSpan))
         {
             return (new Locker(this, semaphore, expiration), true);
         }
 
-        // Decrement refcount on timeout (we incremented when getting/creating the semaphore).
-        var removed = ReleaseReference(semaphore);
-
-        if (removed)
-        {
-            // No one else references this semaphore, dispose it.
-            semaphore.Value.Dispose();
-        }
-
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("Timeout elapsed before acquiring the named lock '{LockName}' after the given timeout of '{Timeout}'.", key, timeout);
+            _logger.LogDebug("Timeout elapsed before acquiring the named lock '{LockName}' after the given timeout of '{Timeout}'.",
+                key, timeout.ToString());
         }
 
         return (null, false);
@@ -68,9 +53,6 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
 
     public Task<bool> IsLockAcquiredAsync(string key)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
         lock (_semaphores)
         {
             if (_semaphores.TryGetValue(key, out var semaphore))
@@ -82,7 +64,7 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
         }
     }
 
-    private NamedSemaphore GetOrCreateSemaphore(string key)
+    private Semaphore GetOrCreateSemaphore(string key)
     {
         lock (_semaphores)
         {
@@ -92,7 +74,7 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
             }
             else
             {
-                semaphore = new NamedSemaphore(key, new SemaphoreSlim(1));
+                semaphore = new Semaphore(key, new SemaphoreSlim(1));
                 _semaphores[key] = semaphore;
             }
 
@@ -100,29 +82,9 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
         }
     }
 
-    // Returns true if the semaphore was removed (RefCount reached 0) and should be disposed by the caller.
-    private bool ReleaseReference(NamedSemaphore semaphoreRef)
+    private sealed class Semaphore
     {
-        lock (_semaphores)
-        {
-            if (_semaphores.TryGetValue(semaphoreRef.Key, out var semaphore))
-            {
-                semaphore.RefCount--;
-
-                if (semaphore.RefCount == 0)
-                {
-                    _semaphores.Remove(semaphoreRef.Key);
-                    return true;
-                }
-            }
-
-            return false;
-        }
-    }
-
-    private sealed class NamedSemaphore
-    {
-        public NamedSemaphore(string key, SemaphoreSlim value)
+        public Semaphore(string key, SemaphoreSlim value)
         {
             Key = key;
             Value = value;
@@ -137,12 +99,12 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
     private sealed class Locker : ILocker
     {
         private readonly LocalLock _localLock;
-        private readonly NamedSemaphore _semaphore;
+        private readonly Semaphore _semaphore;
         private readonly CancellationTokenSource _cts;
         private volatile int _released;
         private bool _disposed;
 
-        public Locker(LocalLock localLock, NamedSemaphore semaphore, TimeSpan? expiration)
+        public Locker(LocalLock localLock, Semaphore semaphore, TimeSpan? expiration)
         {
             _localLock = localLock;
             _semaphore = semaphore;
@@ -158,17 +120,20 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
         {
             if (Interlocked.Exchange(ref _released, 1) == 0)
             {
-                // Decrement refcount and potentially remove from dictionary first.
-                var removed = _localLock.ReleaseReference(_semaphore);
-
-                // Then release the semaphore to allow next waiter (if any) to proceed.
-                _semaphore.Value.Release();
-
-                // If no one else references it anymore, dispose it.
-                if (removed)
+                lock (_localLock._semaphores)
                 {
-                    _semaphore.Value.Dispose();
+                    if (_localLock._semaphores.TryGetValue(_semaphore.Key, out var semaphore))
+                    {
+                        semaphore.RefCount--;
+
+                        if (semaphore.RefCount == 0)
+                        {
+                            _localLock._semaphores.Remove(_semaphore.Key);
+                        }
+                    }
                 }
+
+                _semaphore.Value.Release();
             }
         }
 
@@ -195,26 +160,9 @@ public sealed class LocalLock : IDistributedLock, ILocalLock, IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
+        var semaphores = _semaphores.Values.ToArray();
 
-        _disposed = true;
-
-        // Dispose only semaphores that are not in use to avoid race issues with active lockers.
-        List<NamedSemaphore> toDispose;
-        lock (_semaphores)
-        {
-            toDispose = _semaphores.Values.Where(s => s.RefCount == 0).ToList();
-            // Remove entries we are disposing.
-            foreach (var s in toDispose)
-            {
-                _semaphores.Remove(s.Key);
-            }
-        }
-
-        foreach (var semaphore in toDispose)
+        foreach (var semaphore in semaphores)
         {
             semaphore.Value.Dispose();
         }

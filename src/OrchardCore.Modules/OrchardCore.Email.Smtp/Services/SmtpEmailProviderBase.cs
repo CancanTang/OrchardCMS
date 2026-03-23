@@ -6,7 +6,6 @@ using MailKit.Security;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using MimeKit;
-using OrchardCore.Infrastructure;
 
 namespace OrchardCore.Email.Smtp.Services;
 
@@ -34,34 +33,27 @@ public abstract class SmtpEmailProviderBase : IEmailProvider
 
     public abstract LocalizedString DisplayName { get; }
 
-    public virtual async Task<Result> SendAsync(MailMessage message)
+    public virtual async Task<EmailResult> SendAsync(MailMessage message)
     {
         ArgumentNullException.ThrowIfNull(message);
 
         if (!_providerOptions.IsEnabled)
         {
-            return Result.Failed(S["The SMTP Email Provider is disabled."]);
+            return EmailResult.FailedResult(S["The SMTP Email Provider is disabled."]);
         }
 
         var senderAddress = string.IsNullOrWhiteSpace(message.From)
             ? _providerOptions.DefaultSender
             : message.From;
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Attempting to send email to {Email}.", message.To);
-        }
+        _logger.LogDebug("Attempting to send email to {Email}.", message.To);
 
         // Set the MailMessage.From, to avoid the confusion between DefaultSender (Author) and submitter (Sender).
         if (!string.IsNullOrWhiteSpace(senderAddress))
         {
             if (!_emailAddressValidator.Validate(senderAddress))
             {
-                return Result.Failed(new ResultError
-                {
-                    Key = nameof(message.From),
-                    Message = S["Invalid email address for the sender: '{0}'.", senderAddress],
-                });
+                return EmailResult.FailedResult(nameof(message.From), S["Invalid email address for the sender: '{0}'.", senderAddress]);
             }
 
             message.From = senderAddress;
@@ -75,21 +67,21 @@ public abstract class SmtpEmailProviderBase : IEmailProvider
             {
                 var response = await SendOnlineMessageAsync(mimeMessage);
 
-                return Result.Success(response);
+                return EmailResult.GetSuccessResult(response);
             }
 
             if (_providerOptions.DeliveryMethod == SmtpDeliveryMethod.SpecifiedPickupDirectory)
             {
                 await SendOfflineMessageAsync(mimeMessage, _providerOptions.PickupDirectoryLocation);
 
-                return Result.Success();
+                return EmailResult.SuccessResult;
             }
 
             throw new NotSupportedException($"The '{_providerOptions.DeliveryMethod}' delivery method is not supported.");
         }
         catch (Exception ex)
         {
-            return Result.Failed(S["An error occurred while sending an email: '{0}'", ex.Message]);
+            return EmailResult.FailedResult([S["An error occurred while sending an email: '{0}'", ex.Message]]);
         }
     }
 

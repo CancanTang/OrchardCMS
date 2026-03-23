@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.ResourceManagement;
 
@@ -14,9 +13,5 @@ public static class ServiceCollectionExtensions
     /// </typeparam>
     public static IServiceCollection AddResourceConfiguration<T>(this IServiceCollection services)
         where T : class, IConfigureOptions<ResourceManagementOptions>
-    {
-        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<ResourceManagementOptions>, T>());
-
-        return services;
-    }
+        => services.AddTransient<IConfigureOptions<ResourceManagementOptions>, T>();
 }

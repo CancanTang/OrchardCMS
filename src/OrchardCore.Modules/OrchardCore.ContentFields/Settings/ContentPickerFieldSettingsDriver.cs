@@ -36,7 +36,6 @@ public sealed class ContentPickerFieldSettingsDriver : ContentPartFieldDefinitio
             model.DisplayedContentTypes = settings.DisplayedContentTypes;
             model.TitlePattern = settings.TitlePattern;
             model.Stereotypes = string.Join(',', settings.DisplayedStereotypes ?? []);
-            model.Placeholder = settings.Placeholder;
         }).Location("Content");
     }
 
@@ -52,7 +51,6 @@ public sealed class ContentPickerFieldSettingsDriver : ContentPartFieldDefinitio
             Required = model.Required,
             Multiple = model.Multiple,
             TitlePattern = model.TitlePattern,
-            Placeholder = model.Placeholder,
         };
 
         switch (model.Source)

@@ -1,5 +1,4 @@
 using System.IO.Hashing;
-using System.Net.Mime;
 using System.Text;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
@@ -67,7 +66,7 @@ public static class GetIntellisenseEndpoint
         // max-age is needed because immutable is not widely supported
         context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
 
-        return Results.Bytes(scriptBytes, MediaTypeNames.Text.JavaScript);
+        return Results.Bytes(scriptBytes, "application/javascript");
     }
 
     private static byte[] GenerateScriptBytes(LiquidViewParser liquidViewParser, IOptions<TemplateOptions> templateOptions)

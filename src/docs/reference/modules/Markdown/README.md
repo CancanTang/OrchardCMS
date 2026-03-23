@@ -130,13 +130,7 @@ By default this helper will also sanitize the Markdown.
 To disable sanitization:
 
 ```csharp
-@await Orchard.MarkdownToHtmlAsync((string)Model.ContentItem.Content.MarkdownParagraph.Content.Markdown, sanitize: false)
-```
-
-Liquid code included in the Markdown can be rendered before the Markdown is converted into HTML. To enable this, set the `renderLiquid` parameter to `true`:
-
-```csharp
-@await Orchard.MarkdownToHtmlAsync((string)Model.ContentItem.Content.MarkdownParagraph.Content.Markdown, renderLiquid: true)
+@await Orchard.MarkdownToHtmlAsync((string)Model.ContentItem.Content.MarkdownParagraph.Content.Markdown, false)
 ```
 
 ## Markdown Configuration
@@ -144,11 +138,9 @@ Liquid code included in the Markdown can be rendered before the Markdown is conv
 The following configuration values are used by default and can be customized:
 
 ```json
-{
-  "OrchardCore_Markdown": {
-    "Extensions": "nohtml+advanced"
-  }
-}
+    "OrchardCore_Markdown": {
+      "Extensions": "nohtml+advanced"
+    }
 ```
 
 The supported extensions described as following:
@@ -183,7 +175,7 @@ The supported extensions described as following:
 | `yaml`              | Parses a YAML format into the MarkdownDocument                                                 |
 | `nonascii-noescape` | Disables URI escape with % characters for non-US-ASCII characters                              |
 | `autolinks`         | Enable autolinks from text `http://`, `https://`, `ftp://`, `mailto:`, `www.xxx.yyy`           |
-| `globalization`     | Adds support for right-to-left content by adding appropriate html attributes                   |
+| `globalization`     | Adds support for right-to-left content by adding appropriate html attribtues                   |
 
 ## Markdown Pipeline
 

@@ -15,8 +15,6 @@ public class ShapeTableBuilder
 
     public IReadOnlyCollection<string> ExcludedFeatureIds { get; }
 
-    internal IFeatureInfo Feature => _feature;
-
     public ShapeAlterationBuilder Describe(string shapeType)
     {
         var alterationBuilder = new ShapeAlterationBuilder(_feature, shapeType);

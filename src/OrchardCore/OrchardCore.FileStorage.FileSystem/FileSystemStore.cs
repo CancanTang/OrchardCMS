@@ -1,16 +1,13 @@
 using Microsoft.Extensions.FileProviders.Physical;
-using Microsoft.Extensions.Logging;
 
 namespace OrchardCore.FileStorage.FileSystem;
 
 public class FileSystemStore : IFileStore
 {
-    private readonly ILogger<FileSystemStore> _logger;
     private readonly string _fileSystemPath;
 
-    public FileSystemStore(string fileSystemPath, ILogger<FileSystemStore> logger)
+    public FileSystemStore(string fileSystemPath)
     {
-        _logger = logger;
         _fileSystemPath = Path.GetFullPath(fileSystemPath);
     }
 
@@ -306,8 +303,10 @@ public class FileSystemStore : IFileStore
             Directory.CreateDirectory(physicalDirectoryPath);
 
             var fileInfo = new FileInfo(physicalPath);
-            await using var outputStream = fileInfo.Create();
-            await inputStream.CopyToAsync(outputStream);
+            using (var outputStream = fileInfo.Create())
+            {
+                await inputStream.CopyToAsync(outputStream);
+            }
 
             return path;
         }
@@ -318,29 +317,6 @@ public class FileSystemStore : IFileStore
         catch (Exception ex)
         {
             throw new FileStoreException($"Cannot create file '{path}'.", ex);
-        }
-    }
-
-    public Task<long?> GetPermittedStorageAsync()
-    {
-        try
-        {
-            var path = GetPhysicalPath(null);
-            var driveOfStoreRoot = DriveInfo
-                .GetDrives()
-                .OrderByDescending(drive => drive.Name.Length)
-                .FirstOrDefault(drive => path.StartsWith(drive.Name));
-
-            return Task.FromResult(driveOfStoreRoot?.AvailableFreeSpace);
-        }
-        catch (Exception ex)
-        {
-            // It is possible, that the process only has limited access to the drive and trying to get this information
-            // raises some kind of error, yet regular use within the _fileSystemPath still works. So any error raised
-            // here should not be blocking.
-            _logger?.LogWarning(ex, "Unable to get free disk space for the file system store.");
-
-            return Task.FromResult<long?>(null);
         }
     }
 

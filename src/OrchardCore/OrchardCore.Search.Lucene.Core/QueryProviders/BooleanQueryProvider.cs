@@ -80,16 +80,13 @@ public class BooleanQueryProvider : ILuceneQueryProvider
 
     private Query CreateFilteredQuery(ILuceneQueryService builder, LuceneQueryContext context, Query query, JsonNode filter)
     {
-        Query filteredQuery;
+        Query filteredQuery = null;
+        var queryObj = filter.AsObject();
 
         switch (filter.GetValueKind())
         {
             case JsonValueKind.Object:
-                var first = filter.AsObject().FirstOrDefault();
-                if (string.IsNullOrEmpty(first.Key))
-                {
-                    return null;
-                }
+                var first = queryObj.First();
 
                 foreach (var queryProvider in _filters)
                 {
@@ -97,18 +94,14 @@ public class BooleanQueryProvider : ILuceneQueryProvider
 
                     if (filteredQuery != null)
                     {
-                        return filteredQuery;
+                        break;
                     }
                 }
                 break;
             case JsonValueKind.Array:
                 foreach (var item in filter.AsArray())
                 {
-                    var firstQuery = item.AsObject().FirstOrDefault();
-                    if (string.IsNullOrEmpty(firstQuery.Key))
-                    {
-                        return null;
-                    }
+                    var firstQuery = item.AsObject().First();
 
                     foreach (var queryProvider in _filters)
                     {
@@ -116,7 +109,7 @@ public class BooleanQueryProvider : ILuceneQueryProvider
 
                         if (filteredQuery != null)
                         {
-                            return filteredQuery;
+                            break;
                         }
                     }
                 }
@@ -124,6 +117,6 @@ public class BooleanQueryProvider : ILuceneQueryProvider
             default: throw new ArgumentException($"Invalid value in boolean query");
         }
 
-        return null;
+        return filteredQuery;
     }
 }

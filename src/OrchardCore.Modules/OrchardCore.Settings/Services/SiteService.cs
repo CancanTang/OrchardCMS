@@ -41,7 +41,7 @@ public class SiteService : ISiteService
             return;
         }
 
-        await _documentManager.UpdateAsync(siteSettings, _ => GetSiteSettingsAsync());
+        await _documentManager.UpdateAsync(siteSettings);
 
         // Clear the internal cache to ensure that any other lookup against
         // this document will load the new values until the site is reloaded.

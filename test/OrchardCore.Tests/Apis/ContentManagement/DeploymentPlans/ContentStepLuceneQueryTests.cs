@@ -33,7 +33,6 @@ public class ContentStepLuceneQueryTests
         data.Add(secondContentItem);
 
         await context.PostRecipeAsync(recipe);
-        await context.WaitForHttpBackgroundJobsAsync(TestContext.Current.CancellationToken);
 
         // Test
         var result = await context

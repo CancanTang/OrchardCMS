@@ -126,21 +126,15 @@ public class DefaultMediaFileStoreCacheFileProvider : PhysicalFileProvider, IMed
 
     public Task<bool> TryDeleteDirectoryAsync(string path)
     {
-        var fileInfo = GetFileInfo(path);
-
-        // fileInfo.Exists doesn't work here, will always return false.
-        if (!Directory.Exists(fileInfo.PhysicalPath))
-        {
-            return Task.FromResult(false);
-        }
+        var directoryInfo = GetFileInfo(path);
 
         try
         {
-            Directory.Delete(fileInfo.PhysicalPath, true);
+            Directory.Delete(directoryInfo.PhysicalPath, true);
         }
         catch (IOException ex)
         {
-            _logger.LogError(ex, "Error deleting cache folder {Path}", fileInfo.PhysicalPath);
+            _logger.LogError(ex, "Error deleting cache folder {Path}", directoryInfo.PhysicalPath);
             return Task.FromResult(false);
         }
 

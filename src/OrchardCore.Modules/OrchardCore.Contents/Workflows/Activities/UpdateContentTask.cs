@@ -11,7 +11,6 @@ using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Helpers;
 using OrchardCore.Workflows.Models;
 using OrchardCore.Workflows.Services;
-using YesSql;
 
 namespace OrchardCore.Contents.Workflows.Activities;
 
@@ -20,7 +19,6 @@ public class UpdateContentTask : ContentTask
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly JavaScriptEncoder _javaScriptEncoder;
-    private readonly ISession _session;
 
     public UpdateContentTask(
         IContentManager contentManager,
@@ -28,14 +26,12 @@ public class UpdateContentTask : ContentTask
         IWorkflowExpressionEvaluator expressionEvaluator,
         IWorkflowScriptEvaluator scriptEvaluator,
         IStringLocalizer<UpdateContentTask> localizer,
-        JavaScriptEncoder javaScriptEncoder,
-        ISession session)
+        JavaScriptEncoder javaScriptEncoder)
         : base(contentManager, scriptEvaluator, localizer)
     {
         _updateModelAccessor = updateModelAccessor;
         _expressionEvaluator = expressionEvaluator;
         _javaScriptEncoder = javaScriptEncoder;
-        _session = session;
     }
 
     public override string Name => nameof(UpdateContentTask);
@@ -171,8 +167,6 @@ public class UpdateContentTask : ContentTask
         }
 
         workflowContext.LastResult = result;
-
-        await _session.CancelAsync();
 
         return Outcomes("Failed");
     }

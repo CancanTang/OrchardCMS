@@ -79,6 +79,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
 
     [HttpPost]
     [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     public IActionResult ExternalLogin(string provider, string returnUrl = null)
     {
         // Request a redirect to the external login provider.
@@ -228,10 +229,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
 
             if (identityResult.Succeeded)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation(3, "User account linked to {LoginProvider} provider.", info.LoginProvider);
-                }
+                _logger.LogInformation(3, "User account linked to {LoginProvider} provider.", info.LoginProvider);
 
                 // The login info must be linked before we consider a redirect, or the login info is lost.
                 if (iUser is User user)
@@ -273,6 +271,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
 
     [HttpPost]
     [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> RegisterExternalLogin(RegisterExternalLoginViewModel model, string returnUrl = null)
     {
         var settings = await _siteService.GetSettingsAsync<ExternalRegistrationSettings>();
@@ -320,10 +319,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
 
                 if (identityResult.Succeeded)
                 {
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation(3, "User account linked to {LoginProvider} provider.", info.LoginProvider);
-                    }
+                    _logger.LogInformation(3, "User account linked to {LoginProvider} provider.", info.LoginProvider);
 
                     foreach (var loginFormEvent in _loginFormEvents)
                     {
@@ -354,6 +350,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
 
     [HttpPost]
     [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> LinkExternalLogin(LinkExternalLoginViewModel model, string returnUrl = null)
     {
         var info = await _signInManager.GetExternalLoginInfoAsync();
@@ -392,10 +389,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
 
                 if (identityResult.Succeeded)
                 {
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation(3, "User account linked to {LoginProvider} provider.", info.LoginProvider);
-                    }
+                    _logger.LogInformation(3, "User account linked to {LoginProvider} provider.", info.LoginProvider);
                     // we have created/linked to the local user, so we must verify the login. If it does not succeed,
                     // the user is not allowed to login.
                     if ((await ExternalSignInAsync(user, info)).Succeeded)
@@ -436,6 +430,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> LinkLogin(string provider)
     {
         // Clear the existing external cookie to ensure a clean login process.
@@ -487,6 +482,7 @@ public sealed class ExternalAuthenticationsController : AccountBaseController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> RemoveLogin(RemoveLoginViewModel model)
     {
         var user = await _userManager.GetUserAsync(User);

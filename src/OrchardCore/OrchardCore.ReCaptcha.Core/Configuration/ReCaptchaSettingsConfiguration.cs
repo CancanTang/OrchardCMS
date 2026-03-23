@@ -14,7 +14,9 @@ public sealed class ReCaptchaSettingsConfiguration : IConfigureOptions<ReCaptcha
 
     public void Configure(ReCaptchaSettings options)
     {
-        var settings = _site.GetSettings<ReCaptchaSettings>();
+        var settings = _site.GetSettingsAsync<ReCaptchaSettings>()
+            .GetAwaiter()
+            .GetResult();
 
         options.SiteKey = settings.SiteKey;
         options.SecretKey = settings.SecretKey;

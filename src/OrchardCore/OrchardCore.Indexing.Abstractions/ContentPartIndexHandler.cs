@@ -9,7 +9,7 @@ namespace OrchardCore.Indexing;
 /// </summary>
 public abstract class ContentPartIndexHandler<TPart> : IContentPartIndexHandler where TPart : ContentPart
 {
-    Task IContentPartIndexHandler.BuildIndexAsync(ContentPart contentPart, ContentTypePartDefinition typePartDefinition, BuildDocumentIndexContext context, IContentIndexSettings settings)
+    Task IContentPartIndexHandler.BuildIndexAsync(ContentPart contentPart, ContentTypePartDefinition typePartDefinition, BuildIndexContext context, IContentIndexSettings settings)
     {
         var part = contentPart as TPart;
 
@@ -28,14 +28,9 @@ public abstract class ContentPartIndexHandler<TPart> : IContentPartIndexHandler 
             keys.Add($"{key}.{typePartDefinition.Name}");
         }
 
-        if (context.DocumentIndex is ContentItemDocumentIndex contentItemIndex && context.Record is ContentItem contentItem)
-        {
-            var buildPartIndexContext = new BuildPartIndexContext(contentItemIndex, contentItem, keys, typePartDefinition, settings);
+        var buildPartIndexContext = new BuildPartIndexContext(context.DocumentIndex, context.ContentItem, keys, typePartDefinition, settings);
 
-            return BuildIndexAsync(part, buildPartIndexContext);
-        }
-
-        return null;
+        return BuildIndexAsync(part, buildPartIndexContext);
     }
 
     public abstract Task BuildIndexAsync(TPart part, BuildPartIndexContext context);

@@ -1,5 +1,3 @@
-using OrchardCore.Infrastructure;
-
 namespace OrchardCore.Sms;
 
 public interface ISmsService
@@ -9,5 +7,5 @@ public interface ISmsService
     /// </summary>
     /// <param name="message">The message to send.</param>
     /// <returns>SmsResult object.</returns>
-    Task<Result> SendAsync(SmsMessage message);
+    Task<SmsResult> SendAsync(SmsMessage message);
 }

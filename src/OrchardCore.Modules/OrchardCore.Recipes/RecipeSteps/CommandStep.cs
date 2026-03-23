@@ -38,25 +38,16 @@ public sealed class CommandStep : NamedRecipeStepHandler
         {
             await using (var output = new ZStringWriter())
             {
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Executing command: {Command}", command);
-                }
+                _logger.LogInformation("Executing command: {Command}", command);
 
                 var commandParameters = _commandParameterParser.Parse(_commandParser.Parse(command));
                 commandParameters.Output = output;
                 await _commandManager.ExecuteAsync(commandParameters);
 
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Command executed with output: {CommandOutput}", output);
-                }
+                _logger.LogInformation("Command executed with output: {CommandOutput}", output);
             }
 
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Executed command: {Command}", command);
-            }
+            _logger.LogInformation("Executed command: {Command}", command);
         }
     }
 

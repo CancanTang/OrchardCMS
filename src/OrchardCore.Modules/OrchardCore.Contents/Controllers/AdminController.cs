@@ -3,8 +3,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -312,16 +314,14 @@ public sealed class AdminController : Controller, IUpdateModel
                 case ContentsBulkAction.Remove:
                     foreach (var item in checkedContentItems)
                     {
-                        if (await IsAuthorizedAsync(CommonPermissions.DeleteContent, item) is var authorized
-                            && !(authorized && await _contentManager.RemoveAsync(item)))
+                        if (!await IsAuthorizedAsync(CommonPermissions.DeleteContent, item))
                         {
                             await _notifier.WarningAsync(H["Couldn't remove selected content."]);
                             await _session.CancelAsync();
-
-                            return authorized
-                               ? RedirectToAction(nameof(List))
-                               : Forbid();
+                            return Forbid();
                         }
+
+                        await _contentManager.RemoveAsync(item);
                     }
                     await _notifier.SuccessAsync(H["Content removed successfully."]);
                     break;
@@ -335,9 +335,14 @@ public sealed class AdminController : Controller, IUpdateModel
     [Admin("Contents/ContentTypes/{id}/Create", "CreateContentItem")]
     public async Task<IActionResult> Create(string id)
     {
-        var contentItem = await _contentManager.NewAsync(id);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return NotFound();
+        }
 
-        if (!await _authorizationService.AuthorizeContentTypeAsync(User, CommonPermissions.EditContent, id, CurrentUserId()))
+        var contentItem = await CreateContentItemOwnedByCurrentUserAsync(id);
+
+        if (!await IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
         {
             return Forbid();
         }
@@ -458,6 +463,7 @@ public sealed class AdminController : Controller, IUpdateModel
         var stayOnSamePage = submitSave == "submit.SaveAndContinue";
         return EditInternalAsync(contentItemId, returnUrl, stayOnSamePage, async contentItem =>
         {
+            await _contentManager.UpdateAsync(contentItem);
             await _contentManager.SaveDraftAsync(contentItem);
 
             var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
@@ -476,44 +482,38 @@ public sealed class AdminController : Controller, IUpdateModel
     public async Task<IActionResult> EditAndPublishPOST(
         string contentItemId,
         [Bind(Prefix = "submit.Publish")] string submitPublish,
-        string returnUrl) => await PublishOrUnpublishAsync(submitPublish == "submit.PublishAndContinue", contentItemId, returnUrl, publish: true);
-
-    [HttpPost]
-    [ActionName(nameof(Edit))]
-    [FormValueRequired("submit.Unpublish")]
-    public async Task<IActionResult> EditAndUnpublishPOST(
-    string contentItemId,
-    [Bind(Prefix = "submit.Unpublish")] string submitUnpublish,
-    string returnUrl) => await PublishOrUnpublishAsync(submitUnpublish == "submit.UnpublishAndContinue", contentItemId, returnUrl, publish: false);
-
-    [HttpPost]
-    public async Task<IActionResult> Delete(string contentItemId, string returnUrl)
+        string returnUrl)
     {
-        var contentItem = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
+        var stayOnSamePage = submitPublish == "submit.PublishAndContinue";
 
-        if (contentItem == null)
+        var content = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
+
+        if (content == null)
         {
             return NotFound();
         }
 
-        if (!await IsAuthorizedAsync(CommonPermissions.DeleteContent, contentItem))
+        if (!await IsAuthorizedAsync(CommonPermissions.PublishContent, content))
         {
             return Forbid();
         }
 
-        var removed = await _contentManager.RemoveAsync(contentItem);
-        if (removed)
+        return await EditInternalAsync(contentItemId, returnUrl, stayOnSamePage, async contentItem =>
         {
-            await _notifier.SuccessAsync(H["Your content has been deleted."]);
-        }
-        else if (Url.IsLocalUrl(returnUrl))
-        {
-            await _notifier.ErrorAsync(H["The operation was canceled."]);
-        }
+            await _contentManager.UpdateAsync(contentItem);
+            var published = await _contentManager.PublishAsync(contentItem);
 
-        return Url.IsLocalUrl(returnUrl)
-            ? this.LocalRedirect(returnUrl, true)
-            : RedirectToAction(nameof(List));
+            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
+
+            if (published)
+            {
+                await _notifier.SuccessAsync(string.IsNullOrWhiteSpace(typeDefinition?.DisplayName)
+                ? H["Your content has been published."]
+                : H["Your {0} has been published.", typeDefinition.DisplayName]);
+            }
+
+            return published;
+        });
     }
 
     [HttpPost]
@@ -593,19 +593,13 @@ public sealed class AdminController : Controller, IUpdateModel
 
         if (contentItem != null)
         {
-            var removed = await _contentManager.RemoveAsync(contentItem);
-            if (removed)
-            {
-                var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
+            await _contentManager.RemoveAsync(contentItem);
 
-                await _notifier.SuccessAsync(string.IsNullOrWhiteSpace(typeDefinition?.DisplayName)
-                    ? H["That content has been removed."]
-                    : H["That {0} has been removed.", typeDefinition.DisplayName]);
-            }
-            else if (Url.IsLocalUrl(returnUrl))
-            {
-                await _notifier.ErrorAsync(H["The operation was canceled."]);
-            }
+            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
+
+            await _notifier.SuccessAsync(string.IsNullOrWhiteSpace(typeDefinition?.DisplayName)
+                ? H["That content has been removed."]
+                : H["That {0} has been removed.", typeDefinition.DisplayName]);
         }
 
         return Url.IsLocalUrl(returnUrl)
@@ -701,7 +695,7 @@ public sealed class AdminController : Controller, IUpdateModel
         bool stayOnSamePage,
         Func<ContentItem, Task<bool>> conditionallyPublish)
     {
-        var contentItem = await _contentManager.NewAsync(id);
+        var contentItem = await CreateContentItemOwnedByCurrentUserAsync(id);
 
         if (!await IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
         {
@@ -755,11 +749,6 @@ public sealed class AdminController : Controller, IUpdateModel
         }
 
         var model = await _contentItemDisplayManager.UpdateEditorAsync(contentItem, this, false);
-
-        if (ModelState.IsValid)
-        {
-            await _contentManager.UpdateAsync(contentItem);
-        }
 
         if (!ModelState.IsValid || !(await conditionallyPublish(contentItem)))
         {
@@ -836,6 +825,14 @@ public sealed class AdminController : Controller, IUpdateModel
         return items;
     }
 
+    private async Task<ContentItem> CreateContentItemOwnedByCurrentUserAsync(string contentType)
+    {
+        var contentItem = await _contentManager.NewAsync(contentType);
+        contentItem.Owner = CurrentUserId();
+
+        return contentItem;
+    }
+
     private string _currentUserId;
 
     private string CurrentUserId()
@@ -859,49 +856,5 @@ public sealed class AdminController : Controller, IUpdateModel
         TempData[nameof(ModelState)] = JsonSerializer.Serialize(errors);
 
         return RedirectToAction(nameof(List));
-    }
-
-    private async Task<IActionResult> PublishOrUnpublishAsync(bool stayOnSamePage, string contentItemId, string returnUrl, bool publish)
-    {
-        var content = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
-
-        if (content == null)
-        {
-            return NotFound();
-        }
-
-        if (!await IsAuthorizedAsync(CommonPermissions.PublishContent, content))
-        {
-            return Forbid();
-        }
-
-        return await EditInternalAsync(contentItemId, returnUrl, stayOnSamePage, async contentItem =>
-        {
-            var hasBeenPublishedOrUnpublished = publish
-                ? await _contentManager.PublishAsync(contentItem)
-                : await _contentManager.UnpublishAsync(contentItem);
-
-            if (hasBeenPublishedOrUnpublished)
-            {
-                var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-                if (publish)
-                {
-                    await _notifier.SuccessAsync(
-                        string.IsNullOrWhiteSpace(typeDefinition?.DisplayName)
-                            ? H["Your content has been published."]
-                            : H["Your {0} has been published.", typeDefinition.DisplayName]);
-                }
-                else
-                {
-                    await _notifier.SuccessAsync(
-                        string.IsNullOrWhiteSpace(typeDefinition?.DisplayName)
-                            ? H["Your content has been unpublished."]
-                            : H["Your {0} has been unpublished.", typeDefinition.DisplayName]);
-                }
-            }
-
-            return hasBeenPublishedOrUnpublished;
-        });
     }
 }

@@ -53,41 +53,82 @@ public class StyleTag
             }
         }
 
-        void PopulateDefinition(ResourceDefinition definition)
+        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
         {
-            definition.SetUrl(src, debugSrc);
+            // Include custom style
+            var setting = resourceManager.RegisterUrl("stylesheet", src, debugSrc);
 
-            if (!string.IsNullOrEmpty(version))
+            if (customAttributes != null)
             {
-                definition.SetVersion(version);
+                foreach (var attribute in customAttributes)
+                {
+                    setting.SetAttribute(attribute.Key, attribute.Value);
+                }
             }
 
-            if (!string.IsNullOrEmpty(cdnSrc))
+            if (at != ResourceLocation.Unspecified)
             {
-                definition.SetCdn(cdnSrc, debugCdnSrc);
+                setting.AtLocation(at);
+            }
+            else
+            {
+                setting.AtLocation(ResourceLocation.Head);
             }
 
-            if (!string.IsNullOrEmpty(culture))
+            if (!string.IsNullOrEmpty(condition))
             {
-                definition.SetCultures(culture.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
-            }
-
-            if (!string.IsNullOrEmpty(dependsOn))
-            {
-                definition.SetDependencies(dependsOn.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+                setting.UseCondition(condition);
             }
 
             if (appendversion.HasValue)
             {
-                definition.ShouldAppendVersion(appendversion);
+                setting.ShouldAppendVersion(appendversion);
+            }
+
+            if (debug != null)
+            {
+                setting.UseDebugMode(debug.Value);
+            }
+
+            if (!string.IsNullOrEmpty(culture))
+            {
+                setting.UseCulture(culture);
+            }
+
+            if (!string.IsNullOrEmpty(dependsOn))
+            {
+                setting.SetDependencies(dependsOn.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            if (at == ResourceLocation.Inline)
+            {
+                resourceManager.RenderLocalStyle(setting, writer);
             }
         }
-
-        void PopulateSettings(RequireSettings setting, bool hasName)
+        else if (!string.IsNullOrEmpty(name) && string.IsNullOrEmpty(src))
         {
-            setting.AtLocation(at != ResourceLocation.Unspecified ? at : ResourceLocation.Head);
+            // Resource required
 
-            if (hasName && useCdn != null)
+            var setting = resourceManager.RegisterResource("stylesheet", name);
+
+            if (customAttributes != null)
+            {
+                foreach (var attribute in customAttributes)
+                {
+                    setting.SetAttribute(attribute.Key, attribute.Value);
+                }
+            }
+
+            if (at != ResourceLocation.Unspecified)
+            {
+                setting.AtLocation(at);
+            }
+            else
+            {
+                setting.AtLocation(ResourceLocation.Head);
+            }
+
+            if (useCdn != null)
             {
                 setting.UseCdn(useCdn.Value);
             }
@@ -112,54 +153,6 @@ public class StyleTag
                 setting.ShouldAppendVersion(appendversion);
             }
 
-            if (customAttributes != null)
-            {
-                foreach (var attribute in customAttributes)
-                {
-                    setting.SetAttribute(attribute.Key, attribute.Value);
-                }
-            }
-        }
-
-        void ProcessSourceStyle()
-        {
-            // {% style src:"~/example.css" %}
-            RequireSettings setting;
-
-            if (string.IsNullOrEmpty(dependsOn))
-            {
-                // Include custom style url.
-                setting = resourceManager.RegisterUrl("stylesheet", src, debugSrc);
-            }
-            else
-            {
-                // Anonymous declaration with dependencies, then display.
-
-                // Using the source as the name to prevent duplicate references to the same file.
-                var s = src.ToLowerInvariant();
-
-                PopulateDefinition(resourceManager.InlineManifest.DefineStyle(s));
-
-                setting = resourceManager.RegisterResource("stylesheet", s);
-            }
-
-            PopulateSettings(setting, hasName: false);
-
-            if (at == ResourceLocation.Inline)
-            {
-                resourceManager.RenderLocalStyle(setting, writer);
-            }
-        }
-
-        void ProcessNamedStyle()
-        {
-            // Resource required.
-            // {% style name:"bootstrap" %}
-
-            var setting = resourceManager.RegisterResource("stylesheet", name);
-
-            PopulateSettings(setting, hasName: true);
-
             if (!string.IsNullOrEmpty(version))
             {
                 setting.UseVersion(version);
@@ -176,34 +169,77 @@ public class StyleTag
                 resourceManager.RenderLocalStyle(setting, writer);
             }
         }
-
-        void ProcessInlineDeclaration()
+        else if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
         {
-            // Inline declaration.
+            // Inline declaration
 
-            PopulateDefinition(resourceManager.InlineManifest.DefineStyle(name));
+            var definition = resourceManager.InlineManifest.DefineStyle(name);
+            definition.SetUrl(src, debugSrc);
 
+            if (customAttributes != null)
+            {
+                foreach (var attribute in customAttributes)
+                {
+                    definition.SetAttribute(attribute.Key, attribute.Value);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(version))
+            {
+                definition.SetVersion(version);
+            }
+
+            if (!string.IsNullOrEmpty(cdnSrc))
+            {
+                definition.SetCdn(cdnSrc, debugCdnSrc);
+            }
+
+            if (!string.IsNullOrEmpty(culture))
+            {
+                definition.SetCultures(culture.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            if (!string.IsNullOrEmpty(dependsOn))
+            {
+                definition.SetDependencies(dependsOn.Split(_separators, StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            // Also include the style.
             var setting = resourceManager.RegisterResource("stylesheet", name);
 
-            PopulateSettings(setting, hasName: true);
+            if (useCdn != null)
+            {
+                setting.UseCdn(useCdn.Value);
+            }
+
+            if (!string.IsNullOrEmpty(condition))
+            {
+                setting.UseCondition(condition);
+            }
+
+            if (debug != null)
+            {
+                setting.UseDebugMode(debug.Value);
+            }
+
+            if (!string.IsNullOrEmpty(culture))
+            {
+                setting.UseCulture(culture);
+            }
+
+            if (at != ResourceLocation.Unspecified)
+            {
+                setting.AtLocation(at);
+            }
+            else
+            {
+                setting.AtLocation(ResourceLocation.Head);
+            }
 
             if (at == ResourceLocation.Inline)
             {
                 resourceManager.RenderLocalStyle(setting, writer);
             }
-        }
-
-        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
-        {
-            ProcessSourceStyle();
-        }
-        else if (!string.IsNullOrEmpty(name) && string.IsNullOrEmpty(src))
-        {
-            ProcessNamedStyle();
-        }
-        else if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(src))
-        {
-            ProcessInlineDeclaration();
         }
 
         return Completion.Normal;

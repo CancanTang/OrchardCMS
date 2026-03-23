@@ -8,6 +8,5 @@ namespace OrchardCore.Search.Lucene;
 public interface ILuceneAnalyzer
 {
     string Name { get; }
-
     Analyzer CreateAnalyzer();
 }

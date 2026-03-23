@@ -1,8 +1,6 @@
-using OrchardCore.Indexing;
-
 namespace OrchardCore.Search.Elasticsearch.Core.Models;
 
-public class ElasticsearchConnectionOptions : ISearchProviderOptions
+public class ElasticsearchConnectionOptions
 {
     /// <summary>
     /// The server url.
@@ -20,54 +18,19 @@ public class ElasticsearchConnectionOptions : ISearchProviderOptions
     public ElasticsearchConnectionType ConnectionType { get; set; }
 
     /// <summary>
-    /// The authentication type for the Elasticsearch server.
-    /// </summary>
-    public ElasticsearchAuthenticationType AuthenticationType { get; set; }
-
-    /// <summary>
-    /// The server ApiKey when using ApiKey authentication type.
-    /// </summary>
-    public string ApiKey { get; set; }
-
-    /// <summary>
-    /// The server Base64 encoded ApiKey when using Base64ApiKey authentication type.
-    /// </summary>
-    public string Base64ApiKey { get; set; }
-
-    /// <summary>
-    /// The Elasticsearch cloud service CloudId. This is only used when the ConnectionType is CloudConnectionPool.
+    /// The Elasticsearch cloud service CloudId.
     /// </summary>
     public string CloudId { get; set; }
 
     /// <summary>
-    /// The server Username when using Basic authentication type.
+    /// The server Username.
     /// </summary>
     public string Username { get; set; }
 
     /// <summary>
-    /// The server Password when using Basic authentication type.
+    /// The server Password.
     /// </summary>
     public string Password { get; set; }
-
-    /// <summary>
-    /// The server's KeyId when using KeyIdAndKey authentication type.
-    /// </summary>
-    public string KeyId { get; set; }
-
-    /// <summary>
-    /// The server's Key when using KeyIdAndKey authentication type.
-    /// </summary>
-    public string Key { get; set; }
-
-    /// <summary>
-    /// Enable the Http Compression.
-    /// </summary>
-    public bool EnableHttpCompression { get; set; } = true;
-
-    /// <summary>
-    /// Enable the debug mode.
-    /// </summary>
-    public bool EnableDebugMode { get; set; }
 
     /// <summary>
     /// The server Certificate Fingerprint.

@@ -52,173 +52,153 @@ public class ScriptTagHelper : TagHelper
 
         if (!hasName && hasSource)
         {
-            ProcessSourceScript(output);
-        }
-        else if (hasName && !hasSource)
-        {
-            await ProcessNamedScriptAsync(output);
-        }
-        else if (hasName && hasSource)
-        {
-            ProcessInlineDeclaration(output);
-        }
-        else
-        {
-            await ProcessCustomContentAsync(output);
-        }
-    }
+            // <script asp-src="~/TheBlogTheme/js/clean-blog.min.js" at="Foot"></script>
+            RequireSettings setting;
 
-    private void ProcessSourceScript(TagHelperOutput output)
-    {
-        // <script asp-src="~/TheBlogTheme/js/clean-blog.min.js" at="Foot"></script>
-        RequireSettings setting;
-
-        if (string.IsNullOrEmpty(DependsOn))
-        {
-            // Include custom script url.
-            setting = _resourceManager.RegisterUrl("script", Src, DebugSrc);
-        }
-        else
-        {
-            // Anonymous declaration with dependencies, then display.
-
-            // Using the source as the name to prevent duplicate references to the same file.
-            var name = Src.ToLowerInvariant();
-
-            PopulateResourceDefinition(_resourceManager.InlineManifest.DefineScript(name));
-
-            setting = _resourceManager.RegisterResource("script", name);
-        }
-
-        PopulateRequireSettings(setting, output, hasName: false);
-
-        if (AppendVersion.HasValue)
-        {
-            setting.ShouldAppendVersion(AppendVersion);
-        }
-
-        if (At == ResourceLocation.Unspecified || At == ResourceLocation.Inline)
-        {
-            RenderScript(output, setting);
-        }
-    }
-
-    private async Task ProcessNamedScriptAsync(TagHelperOutput output)
-    {
-        // Resource required.
-        // <script asp-name="bootstrap" at="Foot"></script>
-
-        var setting = _resourceManager.RegisterResource("script", Name);
-
-        PopulateRequireSettings(setting, output, hasName: true);
-
-        if (AppendVersion.HasValue)
-        {
-            setting.ShouldAppendVersion(AppendVersion);
-        }
-
-        if (!string.IsNullOrEmpty(Version))
-        {
-            setting.UseVersion(Version);
-        }
-
-        // This allows additions to the pre registered scripts dependencies.
-        if (!string.IsNullOrEmpty(DependsOn))
-        {
-            setting.SetDependencies(DependsOn.Split(ResourceManagementConstants.ParameterValuesSeparator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
-        }
-
-        // Allow Inline to work with both named scripts, and named inline scripts.
-        if (At != ResourceLocation.Unspecified)
-        {
-            // Named inline declaration.
-            var childContent = await output.GetChildContentAsync();
-            if (!childContent.IsEmptyOrWhiteSpace)
+            if (string.IsNullOrEmpty(DependsOn))
             {
-                // Inline content definition.
-                _resourceManager.InlineManifest.DefineScript(Name)
-                   .SetInnerContent(childContent.GetContent());
+                // Include custom script url.
+                setting = _resourceManager.RegisterUrl("script", Src, DebugSrc);
+            }
+            else
+            {
+                // Anonymous declaration with dependencies, then display.
+
+                // Using the source as the name to prevent duplicate references to the same file.
+                var name = Src.ToLowerInvariant();
+
+                PopulateResourceDefinition(_resourceManager.InlineManifest.DefineScript(name));
+
+                setting = _resourceManager.RegisterResource("script", name);
             }
 
-            if (At == ResourceLocation.Inline)
+            PopulateRequireSettings(setting, output, hasName: false);
+
+            if (AppendVersion.HasValue)
+            {
+                setting.ShouldAppendVersion(AppendVersion);
+            }
+
+            if (At == ResourceLocation.Unspecified || At == ResourceLocation.Inline)
             {
                 RenderScript(output, setting);
             }
         }
-        else
+        else if (hasName && !hasSource)
         {
-            RenderScript(output, setting);
-        }
-    }
+            // Resource required.
+            // <script asp-name="bootstrap" at="Foot"></script>
 
-    private void ProcessInlineDeclaration(TagHelperOutput output)
-    {
-        // Inline declaration.
-
-        PopulateResourceDefinition(_resourceManager.InlineManifest.DefineScript(Name));
-
-        // If At is specified then we also render it.
-        if (At != ResourceLocation.Unspecified)
-        {
             var setting = _resourceManager.RegisterResource("script", Name);
 
             PopulateRequireSettings(setting, output, hasName: true);
 
-            if (At == ResourceLocation.Inline)
+            if (AppendVersion.HasValue)
+            {
+                setting.ShouldAppendVersion(AppendVersion);
+            }
+
+            if (!string.IsNullOrEmpty(Version))
+            {
+                setting.UseVersion(Version);
+            }
+
+            // This allows additions to the pre registered scripts dependencies.
+            if (!string.IsNullOrEmpty(DependsOn))
+            {
+                setting.SetDependencies(DependsOn.Split(ResourceManagementConstants.ParameterValuesSeparator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            // Allow Inline to work with both named scripts, and named inline scripts.
+            if (At != ResourceLocation.Unspecified)
+            {
+                // Named inline declaration.
+                var childContent = await output.GetChildContentAsync();
+                if (!childContent.IsEmptyOrWhiteSpace)
+                {
+                    // Inline content definition.
+                    _resourceManager.InlineManifest.DefineScript(Name)
+                       .SetInnerContent(childContent.GetContent());
+                }
+
+                if (At == ResourceLocation.Inline)
+                {
+                    RenderScript(output, setting);
+                }
+            }
+            else
             {
                 RenderScript(output, setting);
             }
         }
-    }
-
-    private async Task ProcessCustomContentAsync(TagHelperOutput output)
-    {
-        // Custom script content.
-        // <script at="Foot"> /* example JavaScript code*/ </script>
-
-        var childContent = await output.GetChildContentAsync();
-
-        if (!string.IsNullOrEmpty(DependsOn))
+        else if (hasName && hasSource)
         {
-            var dependencies = DependsOn.Split(ResourceManagementConstants.ParameterValuesSeparator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            // Inline declaration.
 
-            foreach (var dependency in dependencies)
+            PopulateResourceDefinition(_resourceManager.InlineManifest.DefineScript(Name));
+
+            // If At is specified then we also render it.
+            if (At != ResourceLocation.Unspecified)
             {
-                var versionParts = dependency.Split(ResourceManagementConstants.VersionSeparator, 2);
+                var setting = _resourceManager.RegisterResource("script", Name);
 
-                var resourceName = versionParts[0];
+                PopulateRequireSettings(setting, output, hasName: true);
 
-                var script = _resourceManager.RegisterResource("script", resourceName);
-
-                if (versionParts.Length == 2)
+                if (At == ResourceLocation.Inline)
                 {
-                    script.Version = versionParts[1];
+                    RenderScript(output, setting);
                 }
-
-                script.AtLocation(At);
             }
-        }
-
-        var builder = new TagBuilder("script");
-        builder.InnerHtml.AppendHtml(childContent);
-        builder.TagRenderMode = TagRenderMode.Normal;
-
-        foreach (var attribute in output.Attributes)
-        {
-            builder.Attributes.Add(attribute.Name, attribute.Value.ToString());
-        }
-
-        if (At == ResourceLocation.Head)
-        {
-            _resourceManager.RegisterHeadScript(builder);
-        }
-        else if (At == ResourceLocation.Inline)
-        {
-            output.Content.SetHtmlContent(builder);
         }
         else
         {
-            _resourceManager.RegisterFootScript(builder);
+            // Custom script content.
+            // <script at="Foot"> /* example JavaScript code*/ </script>
+
+            var childContent = await output.GetChildContentAsync();
+
+            if (!string.IsNullOrEmpty(DependsOn))
+            {
+                var dependencies = DependsOn.Split(ResourceManagementConstants.ParameterValuesSeparator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var dependency in dependencies)
+                {
+                    var versionParts = dependency.Split(ResourceManagementConstants.VersionSeparator, 2);
+
+                    var resourceName = versionParts[0];
+
+                    var script = _resourceManager.RegisterResource("script", resourceName);
+
+                    if (versionParts.Length == 2)
+                    {
+                        script.Version = versionParts[1];
+                    }
+
+                    script.AtLocation(At);
+                }
+            }
+
+            var builder = new TagBuilder("script");
+            builder.InnerHtml.AppendHtml(childContent);
+            builder.TagRenderMode = TagRenderMode.Normal;
+
+            foreach (var attribute in output.Attributes)
+            {
+                builder.Attributes.Add(attribute.Name, attribute.Value.ToString());
+            }
+
+            if (At == ResourceLocation.Head)
+            {
+                _resourceManager.RegisterHeadScript(builder);
+            }
+            else if (At == ResourceLocation.Inline)
+            {
+                output.Content.SetHtmlContent(builder);
+            }
+            else
+            {
+                _resourceManager.RegisterFootScript(builder);
+            }
         }
     }
 

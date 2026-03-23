@@ -1,5 +1,4 @@
 @using Microsoft.Extensions.DependencyInjection
-@using OrchardCore.Infrastructure
 
 @* Adding meta tags *@
 <meta asp-name="foo" content="bar" />
@@ -24,7 +23,7 @@
 <style asp-src="bar.min.css" debug-src="bar.css"></style>
 
 @* Adding custom links *@
-<link asp-src="http://example.com/feed" rel="alternate" type="@MediaTypeNamesExtended.Application.XmlRss" />
+<link asp-src="http://example.com/feed" rel="alternate" type="application/rss+xml" />
 
 @* Adding custom script *@
 <script at="Foot">document.write('<!-- some script -->');</script>

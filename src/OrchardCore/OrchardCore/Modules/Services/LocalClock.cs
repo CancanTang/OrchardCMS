@@ -22,6 +22,9 @@ public class LocalClock : ILocalClock
         _calendarManager = calendarManager;
     }
 
+    public Task<DateTimeOffset> LocalNowAsync
+        => GetLocalNowAsync();
+
     public async Task<DateTimeOffset> GetLocalNowAsync()
         => _clock.ConvertToTimeZone(_clock.UtcNow, await GetLocalTimeZoneAsync());
 

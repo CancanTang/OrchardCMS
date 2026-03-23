@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
@@ -263,7 +262,7 @@ public class ResourceDefinition
                     tagBuilder = new TagBuilder("style")
                     {
                         Attributes = {
-                            { "type", MediaTypeNames.Text.Css },
+                            { "type", "text/css" },
                         },
                     };
                 }
@@ -274,7 +273,7 @@ public class ResourceDefinition
                     {
                         TagRenderMode = TagRenderMode.SelfClosing,
                         Attributes = {
-                            { "type", MediaTypeNames.Text.Css },
+                            { "type", "text/css" },
                             { "rel", "stylesheet" },
                         },
                     };

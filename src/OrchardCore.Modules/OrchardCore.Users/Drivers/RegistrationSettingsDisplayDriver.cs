@@ -46,7 +46,7 @@ public sealed class RegistrationSettingsDisplayDriver : SiteDisplayDriver<Regist
             model.UsersMustValidateEmail = settings.UsersMustValidateEmail;
             model.UsersAreModerated = settings.UsersAreModerated;
             model.UseSiteTheme = settings.UseSiteTheme;
-        }).Location("Content:5#General")
+        }).Location("Content:5")
         .OnGroup(SettingsGroupId);
     }
 

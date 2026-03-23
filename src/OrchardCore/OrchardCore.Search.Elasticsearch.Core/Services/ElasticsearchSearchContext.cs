@@ -1,20 +1,33 @@
 using Elastic.Clients.Elasticsearch;
-using OrchardCore.Indexing.Models;
+using Elastic.Clients.Elasticsearch.Core.Search;
+using Elastic.Clients.Elasticsearch.QueryDsl;
 
 namespace OrchardCore.Search.Elasticsearch.Core.Services;
 
 public class ElasticsearchSearchContext
 {
-    public IndexProfile IndexProfile { get; }
+    public string IndexName { get; }
 
-    public SearchRequest SearchRequest { get; }
+    public Query Query { get; }
 
-    public ElasticsearchSearchContext(IndexProfile indexProfile, SearchRequest searchRequest)
+    public Highlight Highlight { get; set; }
+
+    public ICollection<SortOptions> Sorts { get; set; }
+
+    public int? From { get; set; }
+
+    public int? Size { get; set; }
+
+    public SourceConfig Source { get; set; }
+
+    public ICollection<FieldAndFormat> Fields { get; set; }
+
+    public ElasticsearchSearchContext(string indexName, Query query)
     {
-        ArgumentNullException.ThrowIfNull(indexProfile);
-        ArgumentNullException.ThrowIfNull(searchRequest);
+        ArgumentException.ThrowIfNullOrEmpty(indexName);
+        ArgumentNullException.ThrowIfNull(query);
 
-        IndexProfile = indexProfile;
-        SearchRequest = searchRequest;
+        IndexName = indexName;
+        Query = query;
     }
 }
